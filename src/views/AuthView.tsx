@@ -138,17 +138,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
     <div className="auth-wrapper">
       <div className={`auth-box ${mode === 'register' && step === 'phone' ? 'auth-box-wide' : ''}`}>
         <div className="auth-header">
-          <div className="auth-brand-mark">ف</div>
+          <div className="auth-brand-mark">پ</div>
           <span className="eyebrow">
-            <span className="line" /> پویش فرهنگی آموزشی سفیر مهر
+            <span className="line" /> سامانه مبلغین و معلمین پیک مهر
           </span>
 
           <h1 className="auth-title">
             {step === 'otp'
               ? 'تأیید شماره و ورود'
               : mode === 'login'
-              ? 'ورود به حساب معلمان'
-              : 'ایجاد حساب کاربری معلم'}
+              ? 'ورود به حساب کاربری'
+              : 'ایجاد حساب کاربری (مبلغین و معلمین)'}
           </h1>
 
           <p className="auth-subtitle">

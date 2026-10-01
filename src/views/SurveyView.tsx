@@ -217,7 +217,7 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
           <span className="line" /> همراهی معلمان
         </span>
         <h1 style={{ margin: '8px 0', fontSize: '2rem', fontWeight: 800 }}>
-          پرسشنامه‌ها و نظرسنجی‌های پویش
+          پرسشنامه‌ها و نظرسنجی‌های سامانه
         </h1>
         <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: '0.95rem' }}>
           نظرات و بازخوردهای ارزنده‌ی شما، راهنمای تدوین برنامه‌ها و ارتقای فعالیت‌های تربیتی است.
@@ -589,7 +589,7 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
                   lineHeight: 1.8,
                 }}
               >
-                به محض انتشار پرسشنامه یا نظرسنجی جدید پیرامون پویش سفیر مهر، در این بخش قابل مشاهده خواهد بود.
+                به محض انتشار پرسشنامه یا نظرسنجی جدید در سامانه، در این بخش قابل مشاهده خواهد بود.
               </p>
             </div>
           ) : (

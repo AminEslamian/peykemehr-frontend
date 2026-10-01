@@ -196,7 +196,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800 }}>
               {teacher?.first_name && teacher?.last_name
                 ? `${teacher.first_name} ${teacher.last_name} گرامی`
-                : 'همکار ارجمند، به پویش سفیر مهر خوش آمدید'}
+                : 'همکار ارجمند، به سامانه پیک مهر خوش آمدید'}
             </h2>
             <p>
               {teacher?.school ? `آموزگار دبستان ${teacher.school} · ` : ''}

@@ -19,10 +19,10 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
     <header className="site-header">
       <div className="header-inner">
         <div className="brand-wrapper" onClick={() => onNavigate('home')}>
-          <span className="brand-mark">ف</span>
+          <span className="brand-mark">پ</span>
           <div className="brand-info">
-            <b>پویش سفیر مهر</b>
-            <small>سامانه معلمان · فرهنگی آموزشی</small>
+            <b>پیک مهر</b>
+            <small>سامانه مبلغین و معلمین</small>
           </div>
         </div>
 
@@ -31,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
             className={`nav-link ${currentView === 'home' ? 'active' : ''}`}
             onClick={() => onNavigate('home')}
           >
-            خانه پویش
+            صفحه نخست
           </span>
           {isAuth ? (
             <>
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
               onClick={() => onNavigate('login')}
             >
               <User size={16} />
-              ورود معلمان
+              ورود به سامانه
             </button>
           )}
         </div>
