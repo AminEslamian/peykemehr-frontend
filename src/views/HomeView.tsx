@@ -1,5 +1,17 @@
 import React from 'react';
-import { ArrowLeft, ChevronLeft, Check, Heart, BookOpen } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronLeft,
+  Check,
+  Heart,
+  BookOpen,
+  UserPlus,
+  ShieldCheck,
+  FileText,
+  BarChart3,
+  Sparkles,
+  HelpCircle,
+} from 'lucide-react';
 
 interface HomeViewProps {
   onNavigate: (view: string) => void;
@@ -11,9 +23,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-text">
-          <span className="eyebrow">
-            <span className="line" /> از دل کلاس، برای زندگی
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
+            <span className="hero-badge">
+              <Sparkles size={14} /> ویژه سال تحصیلی ۱۴۰۴–۱۴۰۵
+            </span>
+            <span className="eyebrow">
+              <span className="line" /> از دل کلاس، برای زندگی
+            </span>
+          </div>
 
           <h1>
             مهربانی را<br />
@@ -58,71 +75,112 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Arched Panel */}
+        {/* Arched Showcase Panel */}
         <div className="hero-panel-wrapper">
           <div className="hero-panel">
             <div className="panel-top">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <BookOpen size={18} />
-                <span>به نام بانوی مهربانی</span>
+              <div className="panel-pill">
+                <Sparkles size={14} />
+                <span>سامانه تعاملی پیک مهر</span>
               </div>
-              <span>۱۴۰۵</span>
+              <div className="panel-status">
+                <span className="status-dot" />
+                <span className="persian-num">سال ۱۴۰۴–۱۴۰۵</span>
+              </div>
             </div>
 
             <div className="panel-center">
-              <span className="panel-line" />
-              <p>
-                هر کلاس،<br />
-                آغاز یک <span>روایت روشن</span>
+              <div className="panel-tagline-badge">فضای هم‌افزایی معلمان و مبلغین</div>
+              <h2 className="panel-hero-heading">
+                روایت تجارب تربیتی،<br />
+                <em>در خدمت فردای روشن دانش‌آموزان</em>
+              </h2>
+              <p className="panel-hero-desc">
+                ثبت فعالیت‌های پرورشی و آموزشی، بارگذاری مستندات چندرسانه‌ای و سنجش بازخوردها
               </p>
-              <span className="panel-line" />
             </div>
 
             <div className="panel-bottom">
-              <span>قصه می‌گوییم</span>
-              <span>با هم می‌سازیم</span>
-              <span>مهربانی می‌آموزیم</span>
+              <div className="panel-stat-item">
+                <span className="stat-title">ثبت تجارب</span>
+                <span className="stat-desc">متن، عکس و فیلم</span>
+              </div>
+              <div className="panel-stat-divider" />
+              <div className="panel-stat-item">
+                <span className="stat-title">بانک مستندات</span>
+                <span className="stat-desc">آرشیو کلاسی</span>
+              </div>
+              <div className="panel-stat-divider" />
+              <div className="panel-stat-item">
+                <span className="stat-title">نظرسنجی</span>
+                <span className="stat-desc">سنجش بازخوردها</span>
+              </div>
             </div>
           </div>
 
           <div className="paper-tag">
-            <Heart size={18} /> از تجربه‌های کوچک، تا اثرهای بزرگ
+            <Heart size={16} /> همراه مطمئن در مسیر تعلیم و تربیت
           </div>
         </div>
       </section>
 
-      {/* Journey Section */}
+      {/* Journey Section (3 Steps) */}
       <section id="journey" className="journey-section">
         <div className="section-title">
           <span className="eyebrow">
-            <span className="line" /> مسیر همراهی شما
+            <span className="line" /> مسیر همراهی
           </span>
-          <h2>چهار قدم تا یک تجربه مشترک</h2>
-          <p>مراحل عضویت و فعالیت مبلغین و معلمان گرامی در سامانه پیک مهر</p>
+          <h2>سه گام تا همراهی در پیک مهر</h2>
+          <p>مسیر ساده و روان برای فعالیت مبلغین و معلمان گرامی در سامانه</p>
         </div>
 
-        <div className="steps-grid">
+        <div className="steps-grid steps-grid-3">
           {[
-            ['۰۱', 'ثبت‌نام و عضویت', 'مشخصات فردی، پایه تحصیلی، نام مدرسه و اطلاعات محل خدمت خود را ثبت فرمایید.'],
-            ['۰۲', 'ورود پیامکی امن', 'با شماره همراه خود و دریافت کد تأیید یکبار مصرف به سادگی وارد سامانه شوید.'],
-            ['۰۳', 'ثبت گزارش و آثار', 'روایت اجرای فعالیت‌ها، عکس‌ها و ویدیوهای کلاس درس را در سامانه بارگذاری فرمایید.'],
-            ['۰۴', 'شرکت در نظرسنجی', 'در نظرسنجی‌های دوره‌ای شرکت نموده و بازخوردهای آموزشی خود را به اشتراک بگذارید.'],
-          ].map(([n, t, d]) => (
-            <div className="step-card" key={n}>
-              <span className="step-number">{n}</span>
-              <h3>{t}</h3>
-              <p>{d}</p>
-            </div>
-          ))}
+            {
+              num: '۰۱',
+              title: 'ثبت‌نام و تکمیل پرونده',
+              desc: 'ثبت مشخصات فردی، پایه تحصیلی، نام مدرسه و اطلاعات محل خدمت به سادگی و در چند ثانیه.',
+              icon: UserPlus,
+            },
+            {
+              num: '۰۲',
+              title: 'ثبت تجارب و آثار کلاسی',
+              desc: 'ارسال روایت‌های کلاسی به همراه بارگذاری آسان تصاویر و ویدیوهای فعالیت‌های فرهنگی و تربیتی.',
+              icon: FileText,
+            },
+            {
+              num: '۰۳',
+              title: 'مشارکت در نظرسنجی‌ها',
+              desc: 'تکمیل پرسشنامه‌های دوره‌ای و ارائه بازخورد جهت ارتقای مستمر کیفیت برنامه‌های آموزشی.',
+              icon: BarChart3,
+            },
+          ].map((step) => {
+            const Icon = step.icon;
+            return (
+              <div className="step-card" key={step.num}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                  <span className="step-number">{step.num}</span>
+                  <div className="step-icon-badge">
+                    <Icon size={20} />
+                  </div>
+                </div>
+                <h3>{step.title}</h3>
+                <p>{step.desc}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
       {/* FAQ Section */}
       <section id="faq" className="faq-section">
         <div className="section-title" style={{ textAlign: 'center' }}>
-          <span className="eyebrow">
-            <span className="line" /> راهنما و پشتیبانی
-          </span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <HelpCircle size={18} style={{ color: 'var(--gold)' }} />
+            <span className="eyebrow">
+              <span className="line" /> راهنما و پشتیبانی
+            </span>
+          </div>
           <h2>پیش از همراهی بدانید</h2>
           <p>پاسخ به متداول‌ترین پرسش‌های مبلغین و معلمان پیرامون نحوه کار با سامانه</p>
         </div>

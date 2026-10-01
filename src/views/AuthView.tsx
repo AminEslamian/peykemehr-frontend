@@ -1,6 +1,18 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Check, AlertCircle, Info } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Check, AlertCircle, Clock, RotateCcw } from 'lucide-react';
 import { api, setTokens, setTeacherInfo } from '../api';
+import { Logo } from '../components/Logo';
+
+const toPersianDigits = (n: number | string): string => {
+  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return n.toString().replace(/\d/g, (x) => farsiDigits[parseInt(x, 10)]);
+};
+
+const formatTimer = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${toPersianDigits(mins)}:${toPersianDigits(secs < 10 ? `0${secs}` : secs)}`;
+};
 
 interface AuthViewProps {
   initialMode: 'login' | 'register';
@@ -13,6 +25,38 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState<number>(0);
+  const [successNotice, setSuccessNotice] = useState<string>('');
+
+  // 60-second Countdown Timer Interval
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Clear rate-limit error message when countdown reaches zero
+  useEffect(() => {
+    if (countdown === 0 && (error.includes('صبر کنید') || error.includes('ثانیه') || error.includes('دقیقه'))) {
+      setError('');
+    }
+  }, [countdown, error]);
+
+  // Dynamically update error with live seconds countdown if rate limited
+  const displayedError = useMemo(() => {
+    if (!error) return '';
+    if (countdown > 0 && (error.includes('صبر کنید') || error.includes('ثانیه') || error.includes('دقیقه') || error.includes('۴۲۹'))) {
+      return `لطفاً ${toPersianDigits(countdown)} ثانیه صبر کنید و سپس مجدداً درخواست ارسال کد نمایید.`;
+    }
+    return error;
+  }, [error, countdown]);
 
   // Login State
   const [loginPhone, setLoginPhone] = useState('');
@@ -54,14 +98,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
   const handleLoginSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessNotice('');
     if (!loginPhone.trim()) return;
+    if (countdown > 0) return;
 
     setLoading(true);
     try {
       await api.sendOtp(loginPhone.trim());
       setStep('otp');
+      setCountdown(60);
+      setSuccessNotice('کد تأیید ورود با موفقیت ارسال گردید.');
     } catch (err: any) {
       setError(err.message);
+      if (err.status === 429) {
+        setCountdown((prev) => (prev > 0 ? prev : 60));
+      }
     } finally {
       setLoading(false);
     }
@@ -93,18 +144,49 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
   const handleRegisterSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessNotice('');
 
     if (regForm.grade.length === 0) {
       setError('لطفاً حداقل یک پایه تحصیلی را انتخاب فرمایید.');
       return;
     }
+    if (countdown > 0) return;
 
     setLoading(true);
     try {
       await api.registerSendOtp(regForm);
       setStep('otp');
+      setCountdown(60);
+      setSuccessNotice('کد تأیید با موفقیت ارسال گردید.');
     } catch (err: any) {
       setError(err.message);
+      if (err.status === 429) {
+        setCountdown((prev) => (prev > 0 ? prev : 60));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP Handler
+  const handleResendOtp = async () => {
+    if (countdown > 0 || loading) return;
+    setError('');
+    setSuccessNotice('');
+    setLoading(true);
+    try {
+      if (mode === 'login') {
+        await api.sendOtp(loginPhone.trim());
+      } else {
+        await api.registerSendOtp(regForm);
+      }
+      setCountdown(60);
+      setSuccessNotice('کد تأیید جدید با موفقیت پیامک شد.');
+    } catch (err: any) {
+      setError(err.message);
+      if (err.status === 429) {
+        setCountdown((prev) => (prev > 0 ? prev : 60));
+      }
     } finally {
       setLoading(false);
     }
@@ -138,7 +220,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
     <div className="auth-wrapper">
       <div className={`auth-box ${mode === 'register' && step === 'phone' ? 'auth-box-wide' : ''}`}>
         <div className="auth-header">
-          <div className="auth-brand-mark">پ</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <Logo size={56} variant="icon" />
+          </div>
           <span className="eyebrow">
             <span className="line" /> سامانه مبلغین و معلمین پیک مهر
           </span>
@@ -166,23 +250,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
           )}
         </div>
 
-        {error && (
-          <div
-            style={{
-              background: 'var(--danger-bg)',
-              border: '1px solid #ffcdd2',
-              color: 'var(--danger)',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              fontSize: '0.88rem',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <span>{error}</span>
+        {successNotice && (
+          <div className="auth-success-box">
+            <Check size={18} />
+            <span>{successNotice}</span>
+          </div>
+        )}
+
+        {displayedError && (
+          <div className="auth-error-box">
+            <AlertCircle size={20} />
+            <span>{displayedError}</span>
           </div>
         )}
 
@@ -209,12 +287,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || countdown > 0}
               className="btn-astra btn-astra-primary btn-astra-lg"
               style={{ width: '100%', marginTop: '16px' }}
             >
-              {loading ? 'در حال ارسال کد...' : 'ارسال کد تأیید ورود'}
-              <ArrowLeft size={18} />
+              {loading
+                ? 'در حال ارسال کد...'
+                : countdown > 0
+                ? `لطفاً صبر کنید (${formatTimer(countdown)})`
+                : 'ارسال کد تأیید ورود'}
+              {countdown === 0 && <ArrowLeft size={18} />}
             </button>
           </form>
         )}
@@ -388,12 +470,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || countdown > 0}
               className="btn-astra btn-astra-primary btn-astra-lg"
               style={{ width: '100%', marginTop: '24px' }}
             >
-              {loading ? 'در حال ارسال اطلاعات...' : 'ثبت مشخصات و دریافت کد تأیید'}
-              <ArrowLeft size={18} />
+              {loading
+                ? 'در حال ارسال اطلاعات...'
+                : countdown > 0
+                ? `لطفاً صبر کنید (${formatTimer(countdown)})`
+                : 'ثبت مشخصات و دریافت کد تأیید'}
+              {countdown === 0 && <ArrowLeft size={18} />}
             </button>
           </form>
         )}
@@ -436,13 +522,34 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
               <Check size={18} />
             </button>
 
-            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <div className="otp-resend-row">
+              {countdown > 0 ? (
+                <div className="otp-countdown-pill">
+                  <Clock size={15} />
+                  <span>امکان ارسال مجدد کد:</span>
+                  <strong className="persian-num">{formatTimer(countdown)}</strong>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="otp-resend-btn"
+                  disabled={loading}
+                  onClick={handleResendOtp}
+                >
+                  <RotateCcw size={14} />
+                  ارسال مجدد کد تأیید
+                </button>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '14px' }}>
               <button
                 type="button"
                 className="btn-astra btn-astra-ghost btn-astra-sm"
                 onClick={() => {
                   setStep('phone');
                   setOtpCode('');
+                  setError('');
                 }}
               >
                 تغییر شماره همراه
@@ -454,35 +561,37 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
         {/* Footer Navigation */}
         <div className="auth-footer-nav">
           {mode === 'login' ? (
-            <>
-              هنوز در سامانه ثبت‌نام نکرده‌اید؟
-              <a
-                href="#register"
-                onClick={(e) => {
-                  e.preventDefault();
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <span>هنوز در سامانه ثبت‌نام نکرده‌اید؟</span>
+              <button
+                type="button"
+                className="auth-switch-link"
+                onClick={() => {
                   setMode('register');
                   setStep('phone');
                   setError('');
+                  setSuccessNotice('');
                 }}
               >
                 ایجاد حساب جدید
-              </a>
-            </>
+              </button>
+            </div>
           ) : (
-            <>
-              قبلاً حساب ساخته‌اید؟
-              <a
-                href="#login"
-                onClick={(e) => {
-                  e.preventDefault();
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <span>قبلاً حساب کاربری ساخته‌اید؟</span>
+              <button
+                type="button"
+                className="auth-switch-link"
+                onClick={() => {
                   setMode('login');
                   setStep('phone');
                   setError('');
+                  setSuccessNotice('');
                 }}
               >
                 ورود به حساب کاربری
-              </a>
-            </>
+              </button>
+            </div>
           )}
         </div>
       </div>

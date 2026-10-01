@@ -1,11 +1,15 @@
 import React from 'react';
+import { Logo } from './Logo';
 
 export const Footer: React.FC = () => {
   return (
     <footer className="site-footer">
-      <div className="header-inner" style={{ flexWrap: 'wrap', gap: '16px' }}>
-        <div className="footer-copy">
-          <b>سامانه پیک مهر</b> — همراه مبلغین و معلمین، برای فردای روشن‌تر دانش‌آموزان
+      <div className="header-inner" style={{ flexWrap: 'wrap', gap: '20px', padding: '28px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Logo size={38} variant="icon" />
+          <div className="footer-copy">
+            <b>سامانه پیک مهر</b> — همراه مبلغین و معلمین، برای فردای روشن‌تر دانش‌آموزان
+          </div>
         </div>
 
         <div className="footer-links">

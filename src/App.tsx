@@ -5,7 +5,7 @@ import { HomeView } from './views/HomeView';
 import { AuthView } from './views/AuthView';
 import { DashboardView } from './views/DashboardView';
 import { SurveyView } from './views/SurveyView';
-import { getAccessToken } from './api';
+import { getAccessToken, clearAuth } from './api';
 
 export type ViewType = 'home' | 'login' | 'register' | 'dashboard' | 'survey';
 
@@ -20,24 +20,40 @@ export const App: React.FC = () => {
   };
 
   const [currentView, setCurrentView] = useState<ViewType>(getHashView());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!getAccessToken());
 
   const navigateTo = (view: string) => {
     window.location.hash = `#/${view}`;
+  };
+
+  const handleLogout = () => {
+    clearAuth();
+    setIsAuthenticated(false);
+    setCurrentView('home');
+    window.location.hash = '#/';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    navigateTo('dashboard');
   };
 
   useEffect(() => {
     const handleHashChange = () => {
       const target = getHashView();
       const token = getAccessToken();
+      const authed = !!token;
+      setIsAuthenticated(authed);
 
       // Protected route guard
-      if ((target === 'dashboard' || target === 'survey') && !token) {
+      if ((target === 'dashboard' || target === 'survey') && !authed) {
         window.location.hash = '#/login';
         return;
       }
 
       // Guest only route guard (redirect logged-in users away from login/register)
-      if ((target === 'login' || target === 'register') && token) {
+      if ((target === 'login' || target === 'register') && authed) {
         window.location.hash = '#/dashboard';
         return;
       }
@@ -55,7 +71,12 @@ export const App: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header currentView={currentView} onNavigate={navigateTo} />
+      <Header
+        currentView={currentView}
+        onNavigate={navigateTo}
+        isAuthenticated={isAuthenticated}
+        onLogout={handleLogout}
+      />
 
       <main style={{ flex: 1 }}>
         {currentView === 'home' && <HomeView onNavigate={navigateTo} />}
@@ -63,7 +84,7 @@ export const App: React.FC = () => {
         {currentView === 'login' && (
           <AuthView
             initialMode="login"
-            onDone={() => navigateTo('dashboard')}
+            onDone={handleAuthSuccess}
             onSwitchMode={(mode) => navigateTo(mode)}
           />
         )}
@@ -71,7 +92,7 @@ export const App: React.FC = () => {
         {currentView === 'register' && (
           <AuthView
             initialMode="register"
-            onDone={() => navigateTo('dashboard')}
+            onDone={handleAuthSuccess}
             onSwitchMode={(mode) => navigateTo(mode)}
           />
         )}

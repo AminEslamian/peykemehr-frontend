@@ -1,29 +1,33 @@
 import React from 'react';
-import { User, LogOut, ArrowLeft } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import { getAccessToken, clearAuth } from '../api';
+import { Logo } from './Logo';
 
 interface HeaderProps {
   currentView: string;
   onNavigate: (view: string) => void;
+  isAuthenticated: boolean;
+  onLogout: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
-  const isAuth = !!getAccessToken();
-
-  const handleLogout = () => {
-    clearAuth();
-    onNavigate('home');
-  };
+export const Header: React.FC<HeaderProps> = ({
+  currentView,
+  onNavigate,
+  isAuthenticated,
+  onLogout,
+}) => {
 
   return (
     <header className="site-header">
       <div className="header-inner">
-        <div className="brand-wrapper" onClick={() => onNavigate('home')}>
-          <span className="brand-mark">پ</span>
-          <div className="brand-info">
-            <b>پیک مهر</b>
-            <small>سامانه مبلغین و معلمین</small>
-          </div>
+        <div
+          className="brand-clickable"
+          onClick={() => onNavigate('home')}
+          style={{ cursor: 'pointer' }}
+          role="button"
+          tabIndex={0}
+        >
+          <Logo size={44} showSubtitle={true} />
         </div>
 
         <nav className="nav-links">
@@ -33,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           >
             صفحه نخست
           </span>
-          {isAuth ? (
+          {isAuthenticated ? (
             <>
               <span
                 className={`nav-link ${currentView === 'dashboard' ? 'active' : ''}`}
@@ -61,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
         </nav>
 
         <div>
-          {isAuth ? (
+          {isAuthenticated ? (
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <button
                 type="button"
@@ -73,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
               <button
                 type="button"
                 className="btn-astra btn-astra-danger btn-astra-sm"
-                onClick={handleLogout}
+                onClick={onLogout}
               >
                 <LogOut size={15} />
                 خروج

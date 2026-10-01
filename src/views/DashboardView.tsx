@@ -199,8 +199,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 : 'همکار ارجمند، به سامانه پیک مهر خوش آمدید'}
             </h2>
             <p>
-              {teacher?.school ? `آموزگار دبستان ${teacher.school} · ` : ''}
-              سامانه ثبت فعالیت‌ها و تجارب آموزشی کلاسی
+              {teacher?.school ? `محل فعالیت: ${teacher.school} · ` : ''}
+              سامانه ثبت فعالیت‌ها و تجارب آموزشی و پرورشی
             </p>
           </div>
         </div>

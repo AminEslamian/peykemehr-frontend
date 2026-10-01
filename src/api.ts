@@ -29,6 +29,62 @@ export const setTeacherInfo = (info: any) => {
   localStorage.setItem('teacher_info', JSON.stringify(info));
 };
 
+function translateApiError(detail: any, status?: number): string {
+  if (status === 429) {
+    return 'لطفاً ۱ دقیقه صبر کنید و سپس مجدداً درخواست ارسال کد نمایید.';
+  }
+
+  const raw = String(detail || '').trim();
+
+  // Rate limit
+  if (/wait before requesting/i.test(raw) || /too many requests/i.test(raw)) {
+    return 'لطفاً ۱ دقیقه صبر کنید و سپس مجدداً درخواست ارسال کد نمایید.';
+  }
+
+  // Phone doesn't exist
+  if (/phone number doesn't exist/i.test(raw) || (/not found/i.test(raw) && status === 404)) {
+    return 'این شماره همراه در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام فرمایید.';
+  }
+
+  // Already registered
+  if (/already registered/i.test(raw)) {
+    if (/national_id/i.test(raw) || /national id/i.test(raw)) {
+      return 'این کد ملی قبلاً در سامانه ثبت شده است.';
+    }
+    return 'این شماره همراه قبلاً در سامانه ثبت شده است. لطفاً وارد حساب خود شوید.';
+  }
+
+  // OTP Verification errors
+  if (/invalid otp/i.test(raw)) {
+    return 'کد تأیید واردشده نادرست است. لطفاً مجدداً بررسی فرمایید.';
+  }
+  if (/otp has expired/i.test(raw)) {
+    return 'کد تأیید منقضی شده است. لطفاً درخواست ارسال مجدد کد نمایید.';
+  }
+  if (/no active otp/i.test(raw)) {
+    return 'کد تأیید فعالی یافت نشد. لطفاً ابتدا درخواست ارسال کد نمایید.';
+  }
+
+  // Validation errors
+  if (/this field is required/i.test(raw)) {
+    return 'تکمیل تمامی فیلدهای ستاره‌دار الزامی است.';
+  }
+  if (/enter a valid/i.test(raw) || /valid phone/i.test(raw)) {
+    return 'شماره همراه واردشده نامعتبر است (باید ۱۱ رقم و با ۰۹ آغاز شود).';
+  }
+
+  // Token errors
+  if (/token/i.test(raw) && /not valid/i.test(raw)) {
+    return 'نشست کاربری شما منقضی شده است. لطفاً مجدداً وارد شوید.';
+  }
+
+  if (raw) {
+    return raw;
+  }
+
+  return 'خطایی در ارتباط با سرور رخ داد. لطفاً مجدداً تلاش فرمایید.';
+}
+
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken();
   const headers = new Headers(options.headers || {});
@@ -42,7 +98,12 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await fetch(url, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch {
+    throw new Error('خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی نمایید.');
+  }
 
   if (res.status === 401) {
     clearAuth();
@@ -61,7 +122,10 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     if (!msg && typeof data === 'object') {
       msg = Object.values(data).flat().join(' - ');
     }
-    throw new Error(msg || 'خطایی در ارتباط با سرور رخ داد.');
+    const translatedMsg = translateApiError(msg, res.status);
+    const error: any = new Error(translatedMsg);
+    error.status = res.status;
+    throw error;
   }
 
   return data as T;
