@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  FileText,
+  PenTool,
+  FolderArchive,
+  ClipboardList,
   Upload,
   Image as ImageIcon,
   Film,
@@ -12,11 +14,15 @@ import {
   Send,
   Loader2,
   X,
-  ClipboardList,
-  Sparkles,
   RefreshCw,
+  GraduationCap,
+  Sparkles,
+  ArrowLeft,
+  Eye,
+  Database,
+  FileCheck,
 } from 'lucide-react';
-import { api, getTeacherInfo, clearAuth } from '../api';
+import { api, getTeacherInfo } from '../api';
 
 interface DashboardViewProps {
   onNavigate: (view: string) => void;
@@ -36,15 +42,38 @@ interface ReportItem {
   created_at: string;
 }
 
+// Convert numbers to Persian digits
+const toPersianDigits = (n: number | string): string => {
+  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return n.toString().replace(/\d/g, (x) => farsiDigits[parseInt(x, 10)]);
+};
+
+// Safe media URL resolver to route through Vite proxy without CORS/host mismatch
+const resolveMediaUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  const cleaned = url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, '');
+  if (cleaned.startsWith('/')) {
+    return cleaned;
+  }
+  return `/media/${cleaned}`;
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const teacher = getTeacherInfo();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Data states
+  // Active Tab: 'create' by default (spacious, zero heavy data load on entry)
+  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
+
+  // Lightweight Tags (fetched once on mount)
   const [tags, setTags] = useState<TagItem[]>([]);
+
+  // Reports Data (On-Demand: requires user admission before downloading media)
   const [reports, setReports] = useState<ReportItem[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [reportsLoaded, setReportsLoaded] = useState(false);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [reportsError, setReportsError] = useState('');
 
   // Form states
   const [reportText, setReportText] = useState('');
@@ -59,26 +88,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const [activeMediaUrl, setActiveMediaUrl] = useState<string | null>(null);
   const [activeMediaType, setActiveMediaType] = useState<'image' | 'video' | null>(null);
 
-  // Load initial data (tags & teacher reports)
-  const fetchData = async () => {
-    setLoadingData(true);
+  // On mount: only fetch lightweight tags list (zero heavy media downloads)
+  useEffect(() => {
+    api
+      .getTags()
+      .then(setTags)
+      .catch(() => setTags([]));
+  }, []);
+
+  // Fetch reports on-demand with user admission
+  const handleLoadReports = async () => {
+    setLoadingReports(true);
+    setReportsError('');
     try {
-      const [fetchedTags, fetchedReports] = await Promise.all([
-        api.getTags().catch(() => []),
-        api.getReports().catch(() => []),
-      ]);
-      setTags(fetchedTags);
-      setReports(fetchedReports);
+      const data = await api.getReports();
+      setReports(data || []);
+      setReportsLoaded(true);
     } catch (err: any) {
-      console.error('Failed to load dashboard data:', err);
+      setReportsError(err.message || 'خطا در دریافت سوابق از سرور. لطفاً مجدداً امتحان کنید.');
     } finally {
-      setLoadingData(false);
+      setLoadingReports(false);
     }
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   // Tag selection toggle
   const toggleTag = (id: number) => {
@@ -110,6 +141,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  // Generate client-side thumbnail URLs for chosen files before submit
+  const filePreviews = useMemo(() => {
+    return selectedFiles.map((file) => ({
+      file,
+      url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      isVideo: file.type.startsWith('video/'),
+    }));
+  }, [selectedFiles]);
+
+  // Clean up object URLs on change
+  useEffect(() => {
+    return () => {
+      filePreviews.forEach((item) => {
+        if (item.url) URL.revokeObjectURL(item.url);
+      });
+    };
+  }, [filePreviews]);
+
   // Submit Report
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +166,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     setSubmitSuccess('');
 
     if (!reportText.trim()) {
-      setSubmitError('لطفاً شرح و روایت فعالیت را وارد فرمایید.');
+      setSubmitError('لطفاً شرح و روایت فعالیت کلاسی را وارد فرمایید.');
       textInputRef.current?.focus();
       return;
     }
@@ -138,17 +187,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       await api.createReport(formData);
 
-      setSubmitSuccess('گزارش فعالیت شما با موفقیت ثبت شد.');
+      setSubmitSuccess('گزارش فعالیت شما با موفقیت در سامانه پیک مهر ثبت گردید.');
       setReportText('');
       setSelectedTagIds([]);
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
-      // Refresh reports list
-      const updatedReports = await api.getReports();
-      setReports(updatedReports);
+      // If user had already loaded reports, refresh them in background
+      if (reportsLoaded) {
+        api.getReports().then(setReports).catch(() => {});
+      }
     } catch (err: any) {
-      setSubmitError(err.message || 'خطا در ثبت گزارش. لطفاً مجدداً تلاش کنید.');
+      setSubmitError(err.message || 'خطا در ثبت گزارش. لطفاً مجدداً تلاش نمایید.');
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +206,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   // Delete Report
   const handleDeleteReport = async (id: number) => {
-    if (!window.confirm('آیا از حذف این گزارش اطمینان دارید؟')) return;
+    if (!window.confirm('آیا از حذف این گزارش فعالیت اطمینان دارید؟')) return;
 
     setDeletingId(id);
     try {
@@ -184,28 +234,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     }
   };
 
+  const teacherFullName = [teacher?.first_name, teacher?.last_name].filter(Boolean).join(' ');
+  const teacherInitial = teacher?.first_name ? teacher.first_name[0] : '';
+
   return (
     <div className="main-wrapper">
-      {/* Welcome Banner */}
-      <div className="welcome-strip" style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="welcome-avatar">
-            {teacher?.first_name ? teacher.first_name[0] : 'م'}
+      {/* Educator Profile Bar (Clean, Dignified, No broken letters) */}
+      <div className="educator-profile-bar">
+        <div className="educator-profile-main">
+          <div className="educator-avatar">
+            {teacherInitial ? (
+              <span>{teacherInitial}</span>
+            ) : (
+              <GraduationCap size={26} />
+            )}
           </div>
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800 }}>
-              {teacher?.first_name && teacher?.last_name
-                ? `${teacher.first_name} ${teacher.last_name} گرامی`
-                : 'همکار ارجمند، به سامانه پیک مهر خوش آمدید'}
+
+          <div className="educator-profile-info">
+            <h2>
+              {teacherFullName ? `${teacherFullName} گرامی` : 'همکار ارجمند، به میز کار پیک مهر خوش آمدید'}
+              <span className="educator-status-pill">
+                <span className="status-dot" />
+                حساب تأییدشده
+              </span>
             </h2>
-            <p>
-              {teacher?.school ? `محل فعالیت: ${teacher.school} · ` : ''}
-              سامانه ثبت فعالیت‌ها و تجارب آموزشی و پرورشی
+            <p className="educator-meta-row">
+              {teacher?.school ? `محل خدمت: ${teacher.school} · ` : ''}
+              {teacher?.phone_number ? `شماره همراه: ${teacher.phone_number} · ` : ''}
+              فضای ثبت تجارب، ارسال مستندات کلاسی و ارتقای فعالیت‌های تربیتی
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="educator-profile-actions">
           <button
             type="button"
             className="btn-astra btn-astra-outline btn-astra-sm"
@@ -214,295 +275,245 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <ClipboardList size={16} />
             نظرسنجی‌های فعال
           </button>
-          <button
-            type="button"
-            className="btn-astra btn-astra-primary btn-astra-sm"
-            onClick={() => {
-              textInputRef.current?.focus();
-              textInputRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            <Send size={16} />
-            ثبت گزارش جدید
-          </button>
         </div>
       </div>
 
-      {/* Action Shortcut Cards */}
-      <div className="action-cards-grid">
-        <div
-          className="action-card"
+      {/* Workspace Navigation Tabs (Segmented Control) */}
+      <div className="dashboard-tab-bar">
+        <button
+          type="button"
+          className={`dashboard-tab-btn ${activeTab === 'create' ? 'active' : ''}`}
+          onClick={() => setActiveTab('create')}
+        >
+          <PenTool size={16} />
+          ثبت گزارش فعالیت جدید
+        </button>
+
+        <button
+          type="button"
+          className={`dashboard-tab-btn ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => {
-            textInputRef.current?.focus();
-            textInputRef.current?.scrollIntoView({ behavior: 'smooth' });
+            setActiveTab('history');
+            // If not yet loaded, user will see the clear admission card to fetch on-demand
           }}
         >
-          <div>
-            <div className="action-icon-box">
-              <FileText size={28} />
-            </div>
-            <h2>ثبت فعالیت کلاسی</h2>
-            <p>
-              تجارب و مستندات ابتکارات آموزشی، عکس‌ها و ویدیوهای مرتبط با فضای کلاس را با
-              سایر همکاران به اشتراک بگذارید.
-            </p>
-          </div>
-          <div className="action-card-footer">
-            <span>تکمیل و ارسال گزارش</span>
-            <span style={{ fontSize: '18px' }}>←</span>
-          </div>
-        </div>
+          <FolderArchive size={16} />
+          سوابق و بایگانی گزارش‌ها
+          {reportsLoaded && (
+            <span className="tab-counter-badge">{toPersianDigits(reports.length)}</span>
+          )}
+        </button>
 
-        <div className="action-card" onClick={() => onNavigate('survey')}>
-          <div>
-            <div className="action-icon-box" style={{ background: '#f5efe1', color: '#8a6e38' }}>
-              <ClipboardList size={28} />
-            </div>
-            <h2>پرسشنامه‌ها و نظرسنجی‌ها</h2>
-            <p>
-              در نظرسنجی‌های دوره‌ای شرکت فرمایید و نظرات کارشناسی خود را جهت بهبود
-              رویکردهای تربیتی و آموزشی ارائه دهید.
-            </p>
-          </div>
-          <div className="action-card-footer" style={{ color: '#8a6e38' }}>
-            <span>ورود به بخش نظرسنجی</span>
-            <span style={{ fontSize: '18px' }}>←</span>
-          </div>
-        </div>
+        <div className="dashboard-tab-spacer" />
 
-        <div className="action-card" style={{ cursor: 'default' }}>
-          <div>
-            <div className="action-icon-box" style={{ background: '#eaf4ee', color: '#236352' }}>
-              <Sparkles size={28} />
-            </div>
-            <h2>نکات ارسال موفق</h2>
-            <p>
-              عکس‌ها و ویدیوها با حجم استاندارد ارسال شوند. انتخاب برچسب‌های مرتبط به
-              دسته‌بندی و دیده‌شدن بهتر روایت شما کمک می‌کند.
-            </p>
-          </div>
-          <div className="action-card-footer" style={{ color: '#236352' }}>
-            <span>پشتیبانی مداوم</span>
-            <CheckCircle size={16} />
-          </div>
-        </div>
+        <button
+          type="button"
+          className="dashboard-tab-btn dashboard-tab-btn-ghost"
+          onClick={() => onNavigate('survey')}
+        >
+          <Sparkles size={15} />
+          ورود به نظرسنجی‌ها
+          <ArrowLeft size={14} />
+        </button>
       </div>
 
-      {/* Studio Grid: Left Form, Right History */}
-      <div className="studio-grid">
-        {/* Form Column */}
-        <div>
-          <div className="auth-box" style={{ position: 'sticky', top: '100px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+      {/* TAB 1: CREATE REPORT STUDIO (Full width, elegant, spacious) */}
+      {activeTab === 'create' && (
+        <div className="studio-card">
+          <div className="studio-header">
+            <h3>
+              <PenTool size={20} style={{ color: 'var(--primary)' }} />
+              ثبت و ارسال روایت فعالیت کلاسی
+            </h3>
+            <p>
+              شرح دستاوردها، اقدامات ابتکاری و تجارب پرورشی خود را همراه با مستندات تصویری ثبت فرمایید.
+            </p>
+          </div>
+
+          {submitSuccess && (
+            <div className="auth-success-box" style={{ marginBottom: '24px' }}>
+              <CheckCircle size={20} />
+              <div style={{ flex: 1 }}>
+                <div>{submitSuccess}</div>
+                <div style={{ marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn-astra btn-astra-outline btn-astra-sm"
+                    onClick={() => {
+                      setActiveTab('history');
+                      if (!reportsLoaded) handleLoadReports();
+                    }}
+                    style={{ fontSize: '0.8rem', padding: '4px 12px' }}
+                  >
+                    مشاهده در سوابق گزارش‌ها
+                    <ArrowLeft size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {submitError && (
+            <div className="auth-error-box" style={{ marginBottom: '24px' }}>
+              <AlertCircle size={20} />
+              <span>{submitError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmitReport}>
+            {/* Report Textarea */}
+            <div className="form-field">
+              <label className="form-label" htmlFor="reportText">
+                شرح و روایت فعالیت <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <textarea
+                id="reportText"
+                ref={textInputRef}
+                className="form-input form-textarea"
+                rows={6}
+                value={reportText}
+                onChange={(e) => setReportText(e.target.value)}
+                placeholder="توضیح دهید چه فعالیتی با دانش‌آموزان انجام شد، بازخورد آنان چه بود و چه دستاورد تربیتی یا آموزشی حاصل گردید..."
+                style={{ resize: 'vertical', minHeight: '160px', lineHeight: '2' }}
+                required
+              />
               <div
                 style={{
-                  background: 'var(--primary-light)',
-                  color: 'var(--primary)',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  display: 'grid',
-                  placeItems: 'center',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '6px',
+                  fontSize: '0.78rem',
+                  color: 'var(--muted-foreground)',
                 }}
               >
-                <Send size={18} />
+                <span>روایت‌های همراه با جزئیات اثرگذاری بیشتری در ارزیابی دارند.</span>
+                <span className="persian-num">{toPersianDigits(reportText.length)} کاراکتر</span>
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
-                ثبت گزارش فعالیت جدید
-              </h3>
             </div>
 
-            <p style={{ margin: '0 0 20px', fontSize: '0.88rem', color: 'var(--muted-foreground)' }}>
-              روایت آموزشی، دستاوردها یا اقدامات ابتکاری خود در کلاس را مرقوم فرمایید.
-            </p>
+            {/* Topic Tags Chips */}
+            <div className="form-field">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TagIcon size={15} style={{ color: 'var(--primary)' }} />
+                  موضوع فعالیت (انتخاب برچسب‌ها)
+                </span>
+                {selectedTagIds.length > 0 && (
+                  <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
+                    {toPersianDigits(selectedTagIds.length)} برچسب انتخاب‌شده
+                  </span>
+                )}
+              </label>
+              {tags.length > 0 ? (
+                <div className="tag-chips">
+                  {tags.map((tag) => {
+                    const isSelected = selectedTagIds.includes(tag.id);
+                    return (
+                      <span
+                        key={tag.id}
+                        className={`tag-chip ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleTag(tag.id)}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        {isSelected && '✓ '}
+                        {tag.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted-foreground)', background: '#f8faf6', padding: '8px 12px', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                  هنوز برچسب موضوعی در پایگاه داده ثبت نشده است.
+                </div>
+              )}
+            </div>
 
-            {submitSuccess && (
+            {/* Media Upload Dropzone */}
+            <div className="form-field">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ImageIcon size={15} style={{ color: 'var(--primary)' }} />
+                ضمیمه عکس یا ویدیو (مستندات کلاسی)
+              </label>
               <div
-                className="banner banner-success"
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--success-bg)',
-                  color: 'var(--success)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginBottom: '16px',
-                  fontSize: '0.9rem',
+                className="upload-dropzone"
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFiles(e.dataTransfer.files);
                 }}
               >
-                <CheckCircle size={18} />
-                <span>{submitSuccess}</span>
-              </div>
-            )}
-
-            {submitError && (
-              <div
-                className="banner banner-error"
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--danger-bg)',
-                  color: 'var(--danger)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginBottom: '16px',
-                  fontSize: '0.9rem',
-                }}
-              >
-                <AlertCircle size={18} />
-                <span>{submitError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitReport}>
-              {/* Report Text */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="reportText">
-                  شرح و روایت فعالیت <span style={{ color: 'var(--danger)' }}>*</span>
-                </label>
-                <textarea
-                  id="reportText"
-                  ref={textInputRef}
-                  className="form-control"
-                  rows={5}
-                  value={reportText}
-                  onChange={(e) => setReportText(e.target.value)}
-                  placeholder="توضیح دهید چه فعالیتی انجام شده، بازخورد دانش‌آموزان چه بوده و چه دستاوردی داشته است..."
-                  style={{ resize: 'vertical' }}
-                  required
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={(e) => handleFiles(e.target.files)}
                 />
+                <div className="upload-dropzone-icon">
+                  <Upload size={24} />
+                </div>
+                <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--foreground)' }}>
+                  انتخاب فایل‌ها یا کشیدن و رها کردن در این قسمت
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted-foreground)', marginTop: '6px' }}>
+                  پشتیبانی از تصاویر (JPG، PNG، WEBP) و ویدیوها (MP4، WEBM)
+                </div>
               </div>
 
-              {/* Tags Selector */}
-              {tags.length > 0 && (
-                <div className="form-group">
-                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <TagIcon size={15} />
-                    برچسب‌های موضوعی (اختیاری)
-                  </label>
-                  <div className="tag-chips">
-                    {tags.map((tag) => {
-                      const isSelected = selectedTagIds.includes(tag.id);
-                      return (
-                        <span
-                          key={tag.id}
-                          className={`tag-chip ${isSelected ? 'selected' : ''}`}
-                          onClick={() => toggleTag(tag.id)}
+              {/* Instant Client-side Previews with Real Thumbnails */}
+              {filePreviews.length > 0 && (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, marginBottom: '10px' }}>
+                    فایل‌های آماده ارسال ({toPersianDigits(filePreviews.length)} مورد):
+                  </div>
+                  <div className="upload-preview-grid">
+                    {filePreviews.map((item, idx) => (
+                      <div key={idx} className="upload-file-item">
+                        <div className="upload-file-thumbnail">
+                          {item.url ? (
+                            <img src={item.url} alt={item.file.name} />
+                          ) : (
+                            <div className="upload-video-placeholder">
+                              <Film size={24} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="upload-file-meta">
+                          <span className="upload-file-name" title={item.file.name}>
+                            {item.file.name}
+                          </span>
+                          <span className="upload-file-size persian-num">
+                            {formatFileSize(item.file.size)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="upload-file-remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(idx);
+                          }}
+                          title="حذف فایل"
                         >
-                          {isSelected && '✓ '}
-                          {tag.name}
-                        </span>
-                      );
-                    })}
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* Media Dropzone */}
-              <div className="form-group">
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ImageIcon size={15} />
-                  ضمیمه عکس یا ویدیو
-                </label>
-                <div
-                  className="upload-dropzone"
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleFiles(e.dataTransfer.files);
-                  }}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    multiple
-                    accept="image/*,video/*"
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
-                  <div className="upload-dropzone-icon">
-                    <Upload size={22} />
-                  </div>
-                  <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--foreground)' }}>
-                    انتخاب فایل‌ها یا کشیدن و رها کردن اینجا
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)', marginTop: '4px' }}>
-                    فرمت‌های مجاز: عکس (JPG, PNG) و ویدیو (MP4, WEBM)
-                  </div>
-                </div>
-
-                {/* Selected Files Preview List */}
-                {selectedFiles.length > 0 && (
-                  <div style={{ marginTop: '12px' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '8px' }}>
-                      فایل‌های انتخاب‌شده ({selectedFiles.length} فایل):
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {selectedFiles.map((file, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '8px 12px',
-                            background: '#f8faf6',
-                            border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.84rem',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                            {file.type.startsWith('video/') ? (
-                              <Film size={16} color="var(--primary)" />
-                            ) : (
-                              <ImageIcon size={16} color="var(--primary)" />
-                            )}
-                            <span
-                              style={{
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxWidth: '200px',
-                                direction: 'ltr',
-                                textAlign: 'left',
-                              }}
-                            >
-                              {file.name}
-                            </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
-                              ({formatFileSize(file.size)})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(idx)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--danger)',
-                              cursor: 'pointer',
-                              padding: '4px',
-                            }}
-                            title="حذف فایل"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Button */}
+            {/* Submit Action */}
+            <div style={{ marginTop: '30px', display: 'flex', gap: '14px', alignItems: 'center' }}>
               <button
                 type="submit"
-                className="btn-astra btn-astra-primary btn-astra-block btn-astra-lg"
+                className="btn-astra btn-astra-primary btn-astra-lg"
                 disabled={submitting}
-                style={{ marginTop: '24px' }}
+                style={{ minWidth: '220px' }}
               >
                 {submitting ? (
                   <>
@@ -516,303 +527,262 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   </>
                 )}
               </button>
-            </form>
-          </div>
-        </div>
 
-        {/* History Column */}
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '20px',
-            }}
-          >
-            <div>
-              <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800 }}>
-                فعالیت‌های ثبت‌شده شما
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>
-                {reports.length} گزارش در سامانه ثبت شده است
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="btn-astra btn-astra-outline btn-astra-sm"
-              onClick={fetchData}
-              title="بروزرسانی لیست"
-            >
-              <RefreshCw size={15} />
-              بروزرسانی
-            </button>
-          </div>
-
-          {loadingData ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '60px 20px',
-                background: '#ffffff',
-                borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <Loader2
-                size={36}
-                className="spinner"
-                style={{ color: 'var(--primary)', marginBottom: '12px' }}
-              />
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
-                در حال دریافت گزارش‌های ثبت‌شده...
-              </p>
-            </div>
-          ) : reports.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '60px 20px',
-                background: '#ffffff',
-                borderRadius: 'var(--radius)',
-                border: '1.5px dashed var(--border)',
-              }}
-            >
-              <FileText
-                size={48}
-                style={{ color: 'var(--muted-foreground)', marginBottom: '16px', opacity: 0.5 }}
-              />
-              <h4 style={{ margin: '0 0 8px', fontSize: '1.1rem' }}>
-                هنوز گزارشی ثبت نکرده‌اید
-              </h4>
-              <p
-                style={{
-                  color: 'var(--muted-foreground)',
-                  fontSize: '0.88rem',
-                  maxWidth: '380px',
-                  margin: '0 auto',
-                  lineHeight: 1.8,
+              <button
+                type="button"
+                className="btn-astra btn-astra-ghost btn-astra-md"
+                onClick={() => {
+                  setReportText('');
+                  setSelectedTagIds([]);
+                  setSelectedFiles([]);
+                  setSubmitSuccess('');
+                  setSubmitError('');
                 }}
+                disabled={submitting}
               >
-                اولین روایت فعالیت آموزشی یا تربیتی خود را از طریق فرم سمت راست ارسال نمایید تا در
-                این بخش ثبت و نمایش داده شود.
-              </p>
+                انصراف و پاک‌سازی
+              </button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {reports.map((report) => (
-                <div key={report.id} className="history-item">
-                  {/* Top Bar: Date, Tags, and Delete Button */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                      marginBottom: '14px',
-                      borderBottom: '1px solid var(--border-light)',
-                      paddingBottom: '12px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '0.82rem',
-                          color: 'var(--muted-foreground)',
-                        }}
-                      >
-                        <Clock size={14} />
-                        {formatDate(report.created_at)}
-                      </span>
+          </form>
+        </div>
+      )}
 
-                      {report.tags && report.tags.length > 0 && (
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          {report.tags.map((tag) => (
-                            <span
-                              key={tag.id}
-                              style={{
-                                background: 'var(--gold-tag)',
-                                color: '#5e4e24',
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                fontSize: '0.78rem',
-                                fontWeight: 600,
-                              }}
-                            >
-                              #{tag.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+      {/* TAB 2: ARCHIVE / PREVIOUS REPORTS (On-Demand with User Admission) */}
+      {activeTab === 'history' && (
+        <div className="studio-card">
+          <div className="studio-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3>
+                <FolderArchive size={20} style={{ color: 'var(--primary)' }} />
+                سوابق و بایگانی فعالیت‌های ثبت‌شده
+              </h3>
+              <p>مشاهده، بازبینی و مدیریت گزارش‌های ارسالی شما در طول سال تحصیلی</p>
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteReport(report.id)}
-                      disabled={deletingId === report.id}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--danger)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '0.82rem',
-                      }}
-                      title="حذف گزارش"
-                    >
-                      {deletingId === report.id ? (
-                        <Loader2 size={15} className="spinner" />
-                      ) : (
-                        <Trash2 size={16} />
-                      )}
-                    </button>
-                  </div>
+            {reportsLoaded && (
+              <button
+                type="button"
+                className="btn-astra btn-astra-outline btn-astra-sm"
+                onClick={handleLoadReports}
+                disabled={loadingReports}
+                title="بروزرسانی سوابق از سرور"
+              >
+                <RefreshCw size={14} className={loadingReports ? 'spinner' : ''} />
+                بروزرسانی سوابق
+              </button>
+            )}
+          </div>
 
-                  {/* Text Content */}
-                  <div
-                    style={{
-                      fontSize: '0.94rem',
-                      lineHeight: 1.9,
-                      whiteSpace: 'pre-wrap',
-                      color: 'var(--foreground)',
-                      marginBottom: '16px',
-                    }}
-                  >
-                    {report.text}
-                  </div>
-
-                  {/* Media Gallery Grid */}
-                  {(report.images?.length > 0 || report.videos?.length > 0) && (
-                    <div className="media-preview-grid">
-                      {report.images?.map((img) => (
-                        <div
-                          key={`img-${img.id}`}
-                          className="media-preview-card"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            setActiveMediaUrl(img.image);
-                            setActiveMediaType('image');
-                          }}
-                        >
-                          <img src={img.image} alt="تصویر پیوست" loading="lazy" />
-                          <div
-                            style={{
-                              position: 'absolute',
-                              bottom: 0,
-                              insetInline: 0,
-                              background: 'rgba(0,0,0,0.5)',
-                              color: '#fff',
-                              fontSize: '0.7rem',
-                              textAlign: 'center',
-                              padding: '2px 4px',
-                            }}
-                          >
-                            تصویر
-                          </div>
-                        </div>
-                      ))}
-
-                      {report.videos?.map((vid) => (
-                        <div
-                          key={`vid-${vid.id}`}
-                          className="media-preview-card"
-                          style={{ cursor: 'pointer', position: 'relative' }}
-                          onClick={() => {
-                            setActiveMediaUrl(vid.video);
-                            setActiveMediaType('video');
-                          }}
-                        >
-                          <video src={vid.video} preload="metadata" />
-                          <div
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              display: 'grid',
-                              placeItems: 'center',
-                              background: 'rgba(0,0,0,0.3)',
-                              color: '#fff',
-                            }}
-                          >
-                            <Film size={24} />
-                          </div>
-                          <div
-                            style={{
-                              position: 'absolute',
-                              bottom: 0,
-                              insetInline: 0,
-                              background: 'rgba(0,0,0,0.6)',
-                              color: '#fff',
-                              fontSize: '0.7rem',
-                              textAlign: 'center',
-                              padding: '2px 4px',
-                            }}
-                          >
-                            ویدیو
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* USER ADMISSION STATE: Has not yet loaded reports from server */}
+          {!reportsLoaded && !loadingReports && (
+            <div className="reports-admission-card">
+              <div className="admission-icon-box">
+                <Database size={30} />
+              </div>
+              <h4>بارگذاری سوابق و فایل‌های چندرسانه‌ای</h4>
+              <p>
+                جهت صرفه‌جویی در مصرف حجم اینترنت و افزایش سرعت سامانه، تصاویر، ویدیوها و گزارش‌های
+                پیشین شما تنها با تأیید و درخواست شما از سرور دریافت می‌شوند.
+              </p>
+              <button
+                type="button"
+                className="btn-astra btn-astra-primary btn-astra-md"
+                onClick={handleLoadReports}
+              >
+                <RefreshCw size={16} />
+                مشاهده و بارگذاری سوابق از سرور
+              </button>
             </div>
           )}
+
+          {/* Loading Indicator */}
+          {loadingReports && (
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <Loader2
+                size={40}
+                className="spinner"
+                style={{ color: 'var(--primary)', marginBottom: '14px' }}
+              />
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.94rem' }}>
+                در حال دریافت سوابق و مستندات کلاسی از سرور...
+              </p>
+            </div>
+          )}
+
+          {reportsError && (
+            <div className="auth-error-box" style={{ marginBottom: '20px' }}>
+              <AlertCircle size={20} />
+              <span>{reportsError}</span>
+            </div>
+          )}
+
+          {/* LOADED STATE: Display Reports */}
+          {reportsLoaded && !loadingReports && (
+            <>
+              {reports.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    background: '#fbfcf9',
+                    borderRadius: 'var(--radius)',
+                    border: '1.5px dashed var(--border)',
+                  }}
+                >
+                  <FileCheck
+                    size={46}
+                    style={{ color: 'var(--muted-foreground)', marginBottom: '14px', opacity: 0.5 }}
+                  />
+                  <h4 style={{ margin: '0 0 8px', fontSize: '1.15rem' }}>
+                    هنوز فعالیتی ثبت نکرده‌اید
+                  </h4>
+                  <p
+                    style={{
+                      color: 'var(--muted-foreground)',
+                      fontSize: '0.88rem',
+                      maxWidth: '380px',
+                      margin: '0 auto 20px',
+                      lineHeight: 1.8,
+                    }}
+                  >
+                    می‌توانید اولین روایت آموزشی یا تجارب کلاسی خود را در تب «ثبت گزارش فعالیت جدید» ارسال فرمایید.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-astra btn-astra-primary btn-astra-sm"
+                    onClick={() => setActiveTab('create')}
+                  >
+                    <PenTool size={15} />
+                    ثبت اولین گزارش فعالیت
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--muted-foreground)', marginBottom: '4px' }}>
+                    تعداد کل گزارش‌های ثبت‌شده شما: <strong style={{ color: 'var(--foreground)' }}>{toPersianDigits(reports.length)}</strong> مورد
+                  </div>
+
+                  {reports.map((report) => (
+                    <div key={report.id} className="history-card">
+                      {/* Top Bar: Date, Tags & Delete */}
+                      <div className="history-card-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                          <span className="history-date-pill">
+                            <Clock size={14} />
+                            {formatDate(report.created_at)}
+                          </span>
+
+                          {report.tags && report.tags.length > 0 && (
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              {report.tags.map((tag) => (
+                                <span key={tag.id} className="history-tag-badge">
+                                  #{tag.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteReport(report.id)}
+                          disabled={deletingId === report.id}
+                          className="history-delete-btn"
+                          title="حذف این گزارش"
+                        >
+                          {deletingId === report.id ? (
+                            <Loader2 size={15} className="spinner" />
+                          ) : (
+                            <>
+                              <Trash2 size={15} />
+                              حذف گزارش
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Text Narrative */}
+                      <div className="history-card-body">
+                        {report.text}
+                      </div>
+
+                      {/* Media Gallery with Safe URLs & Lightbox */}
+                      {(report.images?.length > 0 || report.videos?.length > 0) && (
+                        <div className="media-preview-grid">
+                          {report.images?.map((img) => {
+                            const resolvedUrl = resolveMediaUrl(img.image);
+                            return (
+                              <div
+                                key={`img-${img.id}`}
+                                className="media-preview-card"
+                                onClick={() => {
+                                  setActiveMediaUrl(resolvedUrl);
+                                  setActiveMediaType('image');
+                                }}
+                                title="مشاهده تصویر در اندازه کامل"
+                              >
+                                <img
+                                  src={resolvedUrl}
+                                  alt="تصویر مستندات کلاسی"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.opacity = '0.4';
+                                  }}
+                                />
+                                <div className="media-card-hover-overlay">
+                                  <Eye size={18} />
+                                  <span>مشاهده تصویر</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {report.videos?.map((vid) => {
+                            const resolvedUrl = resolveMediaUrl(vid.video);
+                            return (
+                              <div
+                                key={`vid-${vid.id}`}
+                                className="media-preview-card"
+                                onClick={() => {
+                                  setActiveMediaUrl(resolvedUrl);
+                                  setActiveMediaType('video');
+                                }}
+                                title="پخش ویدیو"
+                              >
+                                <video src={resolvedUrl} preload="metadata" />
+                                <div className="media-card-hover-overlay">
+                                  <Film size={22} />
+                                  <span>پخش ویدیو</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Lightbox / Media Viewer Modal */}
       {activeMediaUrl && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(8px)',
-            zIndex: 2000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
+          className="lightbox-overlay"
           onClick={() => setActiveMediaUrl(null)}
         >
           <div
-            style={{
-              position: 'relative',
-              maxWidth: '90vw',
-              maxHeight: '85vh',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              background: '#000',
-            }}
+            className="lightbox-content"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
+              className="lightbox-close-btn"
               onClick={() => setActiveMediaUrl(null)}
-              style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: 'rgba(0,0,0,0.6)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                cursor: 'pointer',
-                display: 'grid',
-                placeItems: 'center',
-                zIndex: 10,
-              }}
+              title="بستن پنجره"
             >
               <X size={20} />
             </button>
@@ -822,13 +792,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 src={activeMediaUrl}
                 controls
                 autoPlay
-                style={{ maxWidth: '100%', maxHeight: '80vh', display: 'block' }}
+                className="lightbox-media-player"
               />
             ) : (
               <img
                 src={activeMediaUrl}
                 alt="نمایش کامل تصویر"
-                style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', display: 'block' }}
+                className="lightbox-media-img"
               />
             )}
           </div>

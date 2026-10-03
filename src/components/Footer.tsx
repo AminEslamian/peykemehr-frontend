@@ -41,15 +41,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           >
             ثبت‌نام و عضویت
           </button>
-          <span className="footer-dot-divider" aria-hidden="true">•</span>
-          <a
-            href="http://127.0.0.1:8000/admin/"
-            target="_blank"
-            rel="noreferrer"
-            className="footer-admin-pill"
-          >
-            پنل مدیریت
-          </a>
         </nav>
       </div>
     </footer>
