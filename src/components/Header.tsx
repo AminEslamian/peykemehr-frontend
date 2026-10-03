@@ -16,13 +16,40 @@ export const Header: React.FC<HeaderProps> = ({
   isAuthenticated,
   onLogout,
 }) => {
+  const handleNavClick = (sectionId?: string) => {
+    if (!sectionId || sectionId === 'top' || sectionId === 'hero') {
+      if (currentView === 'home') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.history.replaceState(null, '', '#/');
+      } else {
+        onNavigate('home');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    if (currentView !== 'home') {
+      onNavigate('home');
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
 
   return (
     <header className="site-header">
       <div className="header-inner">
         <div
           className="brand-clickable"
-          onClick={() => onNavigate('home')}
+          onClick={() => handleNavClick('top')}
           style={{ cursor: 'pointer' }}
           role="button"
           tabIndex={0}
@@ -33,7 +60,9 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="nav-links">
           <span
             className={`nav-link ${currentView === 'home' ? 'active' : ''}`}
-            onClick={() => onNavigate('home')}
+            onClick={() => handleNavClick('top')}
+            role="button"
+            tabIndex={0}
           >
             صفحه نخست
           </span>
@@ -42,24 +71,38 @@ export const Header: React.FC<HeaderProps> = ({
               <span
                 className={`nav-link ${currentView === 'dashboard' ? 'active' : ''}`}
                 onClick={() => onNavigate('dashboard')}
+                role="button"
+                tabIndex={0}
               >
                 ثبت گزارش
               </span>
               <span
                 className={`nav-link ${currentView === 'survey' ? 'active' : ''}`}
                 onClick={() => onNavigate('survey')}
+                role="button"
+                tabIndex={0}
               >
                 نظرسنجی‌ها
               </span>
             </>
           ) : (
             <>
-              <a href="#journey" className="nav-link">
+              <span
+                className="nav-link"
+                onClick={() => handleNavClick('journey')}
+                role="button"
+                tabIndex={0}
+              >
                 مسیر همراهی
-              </a>
-              <a href="#faq" className="nav-link">
+              </span>
+              <span
+                className="nav-link"
+                onClick={() => handleNavClick('faq')}
+                role="button"
+                tabIndex={0}
+              >
                 پرسش‌های متداول
-              </a>
+              </span>
             </>
           )}
         </nav>

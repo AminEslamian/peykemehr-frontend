@@ -59,7 +59,18 @@ export const App: React.FC = () => {
       }
 
       setCurrentView(target);
-      window.scrollTo(0, 0);
+
+      const rawHash = window.location.hash.replace(/^#\/?/, '');
+      if (target === 'home' && (rawHash === 'journey' || rawHash === 'faq')) {
+        setTimeout(() => {
+          const el = document.getElementById(rawHash);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      } else {
+        window.scrollTo(0, 0);
+      }
     };
 
     // Initial check on mount
@@ -102,7 +113,7 @@ export const App: React.FC = () => {
         {currentView === 'survey' && <SurveyView onNavigate={navigateTo} />}
       </main>
 
-      <Footer />
+      <Footer onNavigate={navigateTo} />
     </div>
   );
 };
