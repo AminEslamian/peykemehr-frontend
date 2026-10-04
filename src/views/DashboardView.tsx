@@ -26,6 +26,8 @@ import {
   MessageSquare,
   Mail,
   MapPin,
+  Inbox,
+  Bell,
 } from 'lucide-react';
 import { api, getTeacherInfo } from '../api';
 
@@ -45,6 +47,16 @@ interface ReportItem {
   images: Array<{ id: number; image: string; created_at: string }>;
   videos: Array<{ id: number; video: string; created_at: string }>;
   created_at: string;
+}
+
+interface TicketItem {
+  id: number;
+  title: string;
+  content: string;
+  answer?: string | null;
+  is_answered: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Convert numbers to Persian digits
@@ -67,9 +79,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const teacher = getTeacherInfo();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
 
   // Active Tab: 'create' | 'history' | 'contact'
   const [activeTab, setActiveTab] = useState<'create' | 'history' | 'contact'>('create');
+
+  // Smooth scroll handler for tabs
+  const handleTabSwitch = (tab: 'create' | 'history' | 'contact') => {
+    setActiveTab(tab);
+    setTimeout(() => {
+      if (tabBarRef.current) {
+        const headerOffset = 96; // 84px header + 12px margin
+        const elementPosition = tabBarRef.current.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+      }
+    }, 40);
+  };
+
+  // Profile data for gender-based honorific ("جناب آقای" / "سرکار خانم")
+  const [profile, setProfile] = useState<{ first_name: string; last_name: string; gender: 'man' | 'woman' } | null>(null);
+
+  // Points & Gamification
+  const [pointsData, setPointsData] = useState<{
+    total: number;
+    points: Array<{ id: number; score: number; reason: string; created_at: string }>;
+  }>({ total: 0, points: [] });
+  const [showPointsModal, setShowPointsModal] = useState(false);
+
+  // Support Tickets
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
+  // Announcements & Blogs
+  const [blogs, setBlogs] = useState<Array<{ id: number; title: string; content: string; media?: string | null; created_at: string }>>([]);
 
   // Contact Form State
   const [contactForm, setContactForm] = useState({
@@ -87,17 +133,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     setContactError('');
     setContactSuccess('');
 
-    if (!contactForm.name.trim() || !contactForm.phone.trim() || !contactForm.subject.trim() || !contactForm.message.trim()) {
-      setContactError('لطفاً تمامی فیلدهای الزامی فرم پیام را تکمیل فرمایید.');
+    if (!contactForm.subject.trim() || !contactForm.message.trim()) {
+      setContactError('لطفاً موضوع و متن پیام پشتیبانی را تکمیل فرمایید.');
       return;
     }
 
     setContactSubmitting(true);
-    setTimeout(() => {
-      setContactSubmitting(false);
-      setContactSuccess('پیام شما با موفقیت دریافت گردید. کارشناسان پشتیبانی سفیر مهر در اسرع وقت پیام شما را بررسی خواهند نمود.');
+    try {
+      await api.createTicket({
+        title: contactForm.subject.trim(),
+        content: contactForm.message.trim(),
+      });
+      setContactSuccess('تیکت شما با موفقیت ثبت شد و به واحد پشتیبانی ارسال گردید.');
       setContactForm((prev) => ({ ...prev, subject: '', message: '' }));
-    }, 600);
+      // Refresh tickets list
+      const updated = await api.getTickets();
+      setTickets(updated || []);
+    } catch (err: any) {
+      setContactError(err.message || 'خطا در ثبت تیکت پشتیبانی. لطفاً مجدداً تلاش نمایید.');
+    } finally {
+      setContactSubmitting(false);
+    }
   };
 
   // Lightweight Tags (fetched once on mount)
@@ -122,12 +178,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const [activeMediaUrl, setActiveMediaUrl] = useState<string | null>(null);
   const [activeMediaType, setActiveMediaType] = useState<'image' | 'video' | null>(null);
 
-  // On mount: only fetch lightweight tags list (zero heavy media downloads)
+  // On mount: fetch lightweight initial data (tags, profile, points, blogs, tickets)
   useEffect(() => {
-    api
-      .getTags()
-      .then(setTags)
-      .catch(() => setTags([]));
+    // 1. Tags
+    api.getTags().then(setTags).catch(() => setTags([]));
+
+    // 2. Profile for gender-based polite Persian honorific
+    api.getProfile().then(setProfile).catch(() => {});
+
+    // 3. Points & score history
+    api.getPoints().then(setPointsData).catch(() => {});
+
+    // 4. Announcements
+    api.getBlogs().then(setBlogs).catch(() => {});
+
+    // 5. Support tickets
+    setLoadingTickets(true);
+    api.getTickets().then(setTickets).catch(() => []).finally(() => setLoadingTickets(false));
   }, []);
 
   // Fetch reports on-demand with user admission
@@ -227,12 +294,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
+      setTimeout(() => {
+        if (tabBarRef.current) {
+          const headerOffset = 96;
+          const elementPosition = tabBarRef.current.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }
+      }, 50);
+
       // If user had already loaded reports, refresh them in background
       if (reportsLoaded) {
         api.getReports().then(setReports).catch(() => {});
       }
     } catch (err: any) {
       setSubmitError(err.message || 'خطا در ثبت گزارش. لطفاً مجدداً تلاش نمایید.');
+      setTimeout(() => {
+        if (tabBarRef.current) {
+          const headerOffset = 96;
+          const elementPosition = tabBarRef.current.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }
+      }, 50);
     } finally {
       setSubmitting(false);
     }
@@ -268,8 +352,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     }
   };
 
-  const teacherFullName = [teacher?.first_name, teacher?.last_name].filter(Boolean).join(' ');
-  const teacherInitial = teacher?.first_name ? teacher.first_name[0] : '';
+  const honorific = profile?.gender === 'woman' ? 'سرکار خانم' : (profile?.gender === 'man' ? 'جناب آقای' : '');
+  const educatorDisplayName = [
+    honorific,
+    profile?.first_name || teacher?.first_name,
+    profile?.last_name || teacher?.last_name,
+  ].filter(Boolean).join(' ');
+  const teacherInitial = (profile?.first_name || teacher?.first_name)?.[0] || '';
 
   return (
     <div className="main-wrapper">
@@ -286,7 +375,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
           <div className="educator-profile-info">
             <h2>
-              {teacherFullName ? `${teacherFullName} گرامی` : 'همکار ارجمند، به میز کار پیک مهر خوش آمدید'}
+              {educatorDisplayName ? `${educatorDisplayName} گرامی` : 'همکار ارجمند، به میز کار پیک مهر خوش آمدید'}
               <span className="educator-status-pill">
                 <span className="status-dot" />
                 حساب تأییدشده
@@ -301,6 +390,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         <div className="educator-profile-actions">
+          <div
+            className="educator-points-badge"
+            onClick={() => setShowPointsModal(true)}
+            title="مشاهده سوابق و جزئیات امتیازات"
+            role="button"
+            tabIndex={0}
+          >
+            <Sparkles size={16} />
+            <span>مجموع امتیازات:</span>
+            <strong>{toPersianDigits(pointsData.total)}</strong>
+            <span className="points-unit">امتیاز</span>
+          </div>
+
           <button
             type="button"
             className="btn-astra btn-astra-outline btn-astra-sm"
@@ -316,7 +418,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <div className="dashboard-hub-grid">
         <div
           className={`hub-card ${activeTab === 'create' ? 'active-hub-card' : ''}`}
-          onClick={() => setActiveTab('create')}
+          onClick={() => handleTabSwitch('create')}
           role="button"
           tabIndex={0}
         >
@@ -360,7 +462,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
         <div
           className={`hub-card ${activeTab === 'contact' ? 'active-hub-card' : ''}`}
-          onClick={() => setActiveTab('contact')}
+          onClick={() => handleTabSwitch('contact')}
           role="button"
           tabIndex={0}
         >
@@ -372,21 +474,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               <h4>تماس و پشتیبانی</h4>
               <span className="hub-card-tag hub-tag-teal">پاسخگویی</span>
             </div>
-            <p>اطلاعات تماس، پیام‌رسان‌ها و ارسال پیام مستقیم به کارشناسان سامانه</p>
+            <p>اطلاعات تماس، پیام‌رسان‌ها و ارسال پیام مستقیم به مدیریت سامانه</p>
           </div>
           <div className="hub-card-action">
-            <span>ارتباط با کارشناسان</span>
+            <span>ارتباط با پشتیبانی و مدیریت</span>
             <ArrowLeft size={16} />
           </div>
         </div>
       </div>
 
+      {/* Announcements & News from Administration */}
+      {blogs.length > 0 && (
+        <div className="announcements-banner">
+          <div className="announcements-header">
+            <Bell size={18} style={{ color: '#b8a26d' }} />
+            <h4>آخرین اطلاعیه‌ها و پیام‌های دبیرخانه پویش</h4>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {blogs.map((b) => (
+              <div key={b.id} className="announcement-item">
+                <div className="announcement-title">{b.title}</div>
+                <div className="announcement-content">{b.content}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Workspace Navigation Tabs (Segmented Control) */}
-      <div className="dashboard-tab-bar">
+      <div className="dashboard-tab-bar" ref={tabBarRef}>
         <button
           type="button"
           className={`dashboard-tab-btn ${activeTab === 'create' ? 'active' : ''}`}
-          onClick={() => setActiveTab('create')}
+          onClick={() => handleTabSwitch('create')}
         >
           <PenTool size={16} />
           ثبت گزارش فعالیت جدید
@@ -396,8 +516,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           type="button"
           className={`dashboard-tab-btn ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => {
-            setActiveTab('history');
-            // If not yet loaded, user will see the clear admission card to fetch on-demand
+            handleTabSwitch('history');
+            if (!reportsLoaded) handleLoadReports();
           }}
         >
           <FolderArchive size={16} />
@@ -410,7 +530,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <button
           type="button"
           className={`dashboard-tab-btn ${activeTab === 'contact' ? 'active' : ''}`}
-          onClick={() => setActiveTab('contact')}
+          onClick={() => handleTabSwitch('contact')}
         >
           <PhoneCall size={16} />
           ارتباط با ما و پشتیبانی
@@ -452,7 +572,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     type="button"
                     className="btn-astra btn-astra-outline btn-astra-sm"
                     onClick={() => {
-                      setActiveTab('history');
+                      handleTabSwitch('history');
                       if (!reportsLoaded) handleLoadReports();
                     }}
                     style={{ fontSize: '0.8rem', padding: '4px 12px' }}
@@ -951,7 +1071,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
             {/* Messaging Form */}
             <div className="contact-form-card">
-              <h4 className="contact-section-title">ارسال پیام به کارشناسان پشتیبانی</h4>
+              <h4 className="contact-section-title">ارسال پیام به مدیریت و پشتیبانی سامانه</h4>
 
               {contactSuccess && (
                 <div className="auth-success-box" style={{ marginBottom: '16px' }}>
@@ -1046,6 +1166,86 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               </form>
             </div>
           </div>
+
+          {/* User Submitted Support Tickets Section */}
+          <div className="contact-tickets-section">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageSquare size={20} style={{ color: 'var(--primary)' }} />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>پیام‌ها و تیکت‌های پشتیبانی شما</h3>
+              </div>
+              <button
+                type="button"
+                className="btn-astra btn-astra-outline btn-astra-sm"
+                onClick={() => {
+                  setLoadingTickets(true);
+                  api.getTickets().then(setTickets).catch(() => {}).finally(() => setLoadingTickets(false));
+                }}
+                disabled={loadingTickets}
+              >
+                <RefreshCw size={14} className={loadingTickets ? 'spinner' : ''} />
+                به‌روزرسانی وضعیت
+              </button>
+            </div>
+
+            {loadingTickets ? (
+              <div className="empty-box" style={{ padding: '30px' }}>
+                <Loader2 size={24} className="spinner" />
+                <span>در حال دریافت وضعیت تیکت‌های پشتیبانی...</span>
+              </div>
+            ) : tickets.length === 0 ? (
+              <div className="empty-box" style={{ padding: '30px' }}>
+                <Inbox size={32} style={{ color: 'var(--muted-foreground)', marginBottom: '8px' }} />
+                <p style={{ margin: 0, fontWeight: 700 }}>تاکنون پیامی از سوی شما ثبت نشده است.</p>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--muted-foreground)' }}>
+                  برای ارسال پرسش یا درخواست پیگیری، فرم بالای صفحه را تکمیل و ارسال فرمایید.
+                </p>
+              </div>
+            ) : (
+              <div className="tickets-list-grid">
+                {tickets.map((t) => (
+                  <div key={t.id} className="ticket-card">
+                    <div className="ticket-card-header">
+                      <div className="ticket-title-group">
+                        <span className="ticket-id-tag">#{toPersianDigits(t.id)}</span>
+                        <h4 className="ticket-title">{t.title}</h4>
+                      </div>
+                      <div className="ticket-status-group">
+                        {t.is_answered ? (
+                          <span className="ticket-status-pill answered">
+                            <CheckCircle size={14} />
+                            پاسخ داده شده
+                          </span>
+                        ) : (
+                          <span className="ticket-status-pill pending">
+                            <Clock size={14} />
+                            در انتظار بررسی
+                          </span>
+                        )}
+                        <span className="ticket-date">{formatDate(t.created_at)}</span>
+                      </div>
+                    </div>
+
+                    <div className="ticket-content">
+                      <p style={{ margin: 0 }}>{t.content}</p>
+                    </div>
+
+                    {t.is_answered && t.answer && (
+                      <div className="ticket-answer-box">
+                        <div className="ticket-answer-header">
+                          <CheckCircle size={16} />
+                          <span>پاسخ رسمی مدیریت سامانه سفیر مهر:</span>
+                        </div>
+                        <div className="ticket-answer-text">
+                          <p style={{ margin: 0 }}>{t.answer}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1083,6 +1283,61 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 className="lightbox-media-img"
               />
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Points History Modal */}
+      {showPointsModal && (
+        <div
+          className="lightbox-overlay"
+          onClick={() => setShowPointsModal(false)}
+        >
+          <div
+            className="points-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="points-modal-header">
+              <div className="points-modal-title">
+                <Sparkles size={20} style={{ color: '#b8a26d' }} />
+                <h3>جزئیات و سوابق امتیازات شما</h3>
+              </div>
+              <button
+                type="button"
+                className="lightbox-close-btn"
+                onClick={() => setShowPointsModal(false)}
+                title="بستن پنجره"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="points-summary-banner">
+              <div className="points-summary-label">مجموع امتیازات کسب‌شده در پویش:</div>
+              <div className="points-summary-val">{toPersianDigits(pointsData.total)} امتیاز</div>
+            </div>
+
+            <div className="points-history-list">
+              {pointsData.points.length === 0 ? (
+                <div className="empty-box" style={{ padding: '24px' }}>
+                  <Sparkles size={24} style={{ color: 'var(--muted-foreground)', marginBottom: '8px' }} />
+                  <p style={{ margin: 0, fontWeight: 700 }}>هنوز امتیازی برای حساب شما ثبت نگردیده است.</p>
+                  <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', margin: '4px 0 0' }}>
+                    با ثبت گزارش فعالیت‌ها و مشارکت در نظرسنجی‌ها، امتیاز ویژه دریافت خواهید نمود.
+                  </p>
+                </div>
+              ) : (
+                pointsData.points.map((pt) => (
+                  <div key={pt.id} className="point-history-item">
+                    <div className="point-item-right">
+                      <span className="point-score-tag">+{toPersianDigits(pt.score)}</span>
+                      <span className="point-reason">{pt.reason || 'امتیاز ثبت فعالیت'}</span>
+                    </div>
+                    <span className="point-date">{formatDate(pt.created_at)}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

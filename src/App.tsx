@@ -5,9 +5,10 @@ import { HomeView } from './views/HomeView';
 import { AuthView } from './views/AuthView';
 import { DashboardView } from './views/DashboardView';
 import { SurveyView } from './views/SurveyView';
-import { getAccessToken, clearAuth } from './api';
+import { AdminView } from './views/AdminView';
+import { getAccessToken, clearAuth, getUserRole } from './api';
 
-export type ViewType = 'home' | 'login' | 'register' | 'dashboard' | 'survey';
+export type ViewType = 'home' | 'login' | 'register' | 'dashboard' | 'survey' | 'admin';
 
 export const App: React.FC = () => {
   const getHashView = (): ViewType => {
@@ -16,11 +17,13 @@ export const App: React.FC = () => {
     if (hash === 'register') return 'register';
     if (hash === 'dashboard') return 'dashboard';
     if (hash === 'survey') return 'survey';
+    if (hash === 'admin') return 'admin';
     return 'home';
   };
 
   const [currentView, setCurrentView] = useState<ViewType>(getHashView());
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!getAccessToken());
+  const [userRole, setUserRoleState] = useState<'admin' | 'teacher' | null>(getUserRole());
 
   const navigateTo = (view: string) => {
     window.location.hash = `#/${view}`;
@@ -29,14 +32,21 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     clearAuth();
     setIsAuthenticated(false);
+    setUserRoleState(null);
     setCurrentView('home');
     window.location.hash = '#/';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (role?: 'admin' | 'teacher') => {
     setIsAuthenticated(true);
-    navigateTo('dashboard');
+    const resolved = role || getUserRole();
+    setUserRoleState(resolved);
+    if (resolved === 'admin') {
+      navigateTo('admin');
+    } else {
+      navigateTo('dashboard');
+    }
   };
 
   useEffect(() => {
@@ -44,18 +54,34 @@ export const App: React.FC = () => {
       const target = getHashView();
       const token = getAccessToken();
       const authed = !!token;
+      const role = getUserRole();
       setIsAuthenticated(authed);
+      setUserRoleState(role);
 
       // Protected route guard: redirect unauthenticated users to login
-      if ((target === 'dashboard' || target === 'survey') && !authed) {
+      if ((target === 'dashboard' || target === 'survey' || target === 'admin') && !authed) {
         window.location.hash = '#/login';
         return;
       }
 
-      // Authenticated route guard: logged-in educators see dashboard hub instead of landing page / auth pages
-      if (authed && (target === 'home' || target === 'login' || target === 'register')) {
-        window.location.hash = '#/dashboard';
-        return;
+      // Role isolation: Admin users must NEVER see educator pages (dashboard / survey) or landing/login
+      if (authed && role === 'admin') {
+        if (target === 'dashboard' || target === 'survey' || target === 'home' || target === 'login' || target === 'register') {
+          window.location.hash = '#/admin';
+          return;
+        }
+      }
+
+      // Role isolation: Standard teachers must NEVER enter admin panel
+      if (authed && role === 'teacher') {
+        if (target === 'admin') {
+          window.location.hash = '#/dashboard';
+          return;
+        }
+        if (target === 'home' || target === 'login' || target === 'register') {
+          window.location.hash = '#/dashboard';
+          return;
+        }
       }
 
       setCurrentView(target);
@@ -86,6 +112,7 @@ export const App: React.FC = () => {
         currentView={currentView}
         onNavigate={navigateTo}
         isAuthenticated={isAuthenticated}
+        userRole={userRole}
         onLogout={handleLogout}
       />
 
@@ -111,6 +138,8 @@ export const App: React.FC = () => {
         {currentView === 'dashboard' && <DashboardView onNavigate={navigateTo} />}
 
         {currentView === 'survey' && <SurveyView onNavigate={navigateTo} />}
+
+        {currentView === 'admin' && <AdminView onNavigate={navigateTo} />}
       </main>
 
       <Footer onNavigate={navigateTo} />

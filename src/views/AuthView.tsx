@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Check, AlertCircle, Clock, RotateCcw } from 'lucide-react';
-import { api, setTokens, setTeacherInfo } from '../api';
+import { api, setTokens, setTeacherInfo, setUserRole } from '../api';
 import { Logo } from '../components/Logo';
 
 const toPersianDigits = (n: number | string): string => {
@@ -16,7 +16,7 @@ const formatTimer = (seconds: number): string => {
 
 interface AuthViewProps {
   initialMode: 'login' | 'register';
-  onDone: () => void;
+  onDone: (role?: 'admin' | 'teacher') => void;
   onSwitchMode: (mode: 'login' | 'register') => void;
 }
 
@@ -131,7 +131,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
       const res = await api.verifyOtp(loginPhone.trim(), otpCode.trim());
       setTokens(res.access, res.refresh);
       if (res.teacher) setTeacherInfo(res.teacher);
-      onDone();
+      const isAdmin = res.redirect_url === '/admin-panel/' || res.teacher?.is_superuser || res.teacher?.is_staff;
+      const role = isAdmin ? 'admin' : 'teacher';
+      setUserRole(role);
+      onDone(role);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -205,7 +208,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
       const res = await api.registerVerifyOtp({ ...regForm, code: otpCode.trim() });
       setTokens(res.access, res.refresh);
       if (res.teacher) setTeacherInfo(res.teacher);
-      onDone();
+      setUserRole('teacher');
+      onDone('teacher');
     } catch (err: any) {
       setError(err.message);
     } finally {

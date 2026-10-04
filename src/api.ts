@@ -14,6 +14,19 @@ export const clearAuth = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('teacher_info');
+  localStorage.removeItem('user_role');
+};
+
+export const getUserRole = (): 'admin' | 'teacher' | null => {
+  const role = localStorage.getItem('user_role');
+  if (role === 'admin' || role === 'teacher') return role;
+  const teacher = getTeacherInfo();
+  if (teacher?.is_superuser || teacher?.is_staff) return 'admin';
+  return role as any;
+};
+
+export const setUserRole = (role: 'admin' | 'teacher') => {
+  localStorage.setItem('user_role', role);
 };
 
 export const getTeacherInfo = () => {
@@ -183,6 +196,68 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // Profile
+  getProfile: () =>
+    request<{
+      first_name: string;
+      last_name: string;
+      gender: 'man' | 'woman';
+    }>('/api/auth/profile/'),
+
+  // Points & Gamification
+  getPoints: () =>
+    request<{
+      total: number;
+      points: Array<{
+        id: number;
+        score: number;
+        reason: string;
+        created_at: string;
+      }>;
+    }>('/api/reports/points/'),
+
+  // Tickets & Support Desk
+  getTickets: () =>
+    request<
+      Array<{
+        id: number;
+        title: string;
+        content: string;
+        answer?: string | null;
+        is_answered: boolean;
+        created_at: string;
+        updated_at: string;
+      }>
+    >('/api/tickets/'),
+
+  createTicket: (data: { title: string; content: string }) =>
+    request<{
+      id: number;
+      title: string;
+      content: string;
+    }>('/api/tickets/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteTicket: (id: number) =>
+    request<void>(`/api/tickets/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  // Announcements & Blogs
+  getBlogs: () =>
+    request<
+      Array<{
+        id: number;
+        title: string;
+        content: string;
+        media?: string | null;
+        created_at: string;
+        updated_at: string;
+      }>
+    >('/api/blogs/'),
+
   // Surveys
   getSurveys: () =>
     request<Array<{ id: number; title: string; description: string; created_at: string }>>(
@@ -212,4 +287,168 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ answers }),
     }),
+
+  // Admin APIs (/admin-panel/api/)
+  admin: {
+    getTeachers: (params?: { search?: string; province?: string; city?: string; position?: string; page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.province) q.append('province', params.province);
+      if (params?.city) q.append('city', params.city);
+      if (params?.position) q.append('position', params.position);
+      if (params?.page) q.append('page', params.page.toString());
+      return request<any>(`/admin-panel/api/teachers/?${q.toString()}`);
+    },
+
+    deleteTeacher: (id: number) =>
+      request<void>(`/admin-panel/api/teachers/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    updateTeacher: (id: number, data: any) =>
+      request<any>(`/admin-panel/api/teachers/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    getReports: (params?: { teacher?: number; province?: string; city?: string; search?: string; page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.teacher) q.append('teacher', params.teacher.toString());
+      if (params?.province) q.append('teacher__province', params.province);
+      if (params?.city) q.append('teacher__city', params.city);
+      if (params?.search) q.append('search', params.search);
+      if (params?.page) q.append('page', params.page.toString());
+      return request<any>(`/admin-panel/api/reports/?${q.toString()}`);
+    },
+
+    deleteReport: (id: number) =>
+      request<void>(`/admin-panel/api/reports/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    getMediaList: (params?: { media_type?: 'image' | 'video'; search?: string; all?: boolean; page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.media_type) q.append('media_type', params.media_type);
+      if (params?.search) q.append('search', params.search);
+      if (params?.all) q.append('all', 'true');
+      if (params?.page) q.append('page', params.page.toString());
+      return request<any>(`/admin-panel/api/media-list/?${q.toString()}`);
+    },
+
+    getTags: () => request<any>('/admin-panel/api/tags/'),
+
+    createTag: (name: string) =>
+      request<any>('/admin-panel/api/tags/', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }),
+
+    deleteTag: (id: number) =>
+      request<void>(`/admin-panel/api/tags/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    getPoints: (params?: { page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.page) q.append('page', params.page.toString());
+      return request<any>(`/admin-panel/api/points/?${q.toString()}`);
+    },
+
+    awardPoints: (data: { teacher: number; score: number; reason: string }) =>
+      request<any>('/admin-panel/api/points/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    getTickets: (params?: { search?: string; page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.page) q.append('page', params.page.toString());
+      return request<any>(`/admin-panel/api/tickets/?${q.toString()}`);
+    },
+
+    answerTicket: (id: number, answer: string) =>
+      request<any>(`/admin-panel/api/tickets/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ answer }),
+      }),
+
+    deleteTicket: (id: number) =>
+      request<void>(`/admin-panel/api/tickets/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    getSurveys: () => request<any>('/admin-panel/api/surveys/'),
+
+    createSurvey: (data: { title: string; description: string; is_active: boolean }) =>
+      request<any>('/admin-panel/api/surveys/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateSurvey: (id: number, data: Partial<{ title: string; description: string; is_active: boolean }>) =>
+      request<any>(`/admin-panel/api/surveys/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    deleteSurvey: (id: number) =>
+      request<void>(`/admin-panel/api/surveys/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    getSubmissions: (surveyId?: number) => {
+      const q = surveyId ? `?survey=${surveyId}` : '';
+      return request<any>(`/admin-panel/api/submissions/${q}`);
+    },
+
+    getAnswers: (submissionId: number) =>
+      request<any>(`/admin-panel/api/answers/?submission=${submissionId}`),
+
+    getTeacherDetail: (id: number) => request<any>(`/admin-panel/api/teachers/${id}/`),
+
+    getReportDetail: (id: number) => request<any>(`/admin-panel/api/reports/${id}/`),
+
+    getQuestions: (surveyId: number) =>
+      request<any>(`/admin-panel/api/questions/?survey=${surveyId}`),
+
+    createQuestion: (data: {
+      survey: number;
+      text: string;
+      question_type: 'text' | 'single_choice' | 'multiple_choice';
+      is_required: boolean;
+      order?: number;
+    }) =>
+      request<any>('/admin-panel/api/questions/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    deleteQuestion: (id: number) =>
+      request<void>(`/admin-panel/api/questions/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    createOption: (data: { question: number; text: string; order?: number }) =>
+      request<any>('/admin-panel/api/options/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    deleteOption: (id: number) =>
+      request<void>(`/admin-panel/api/options/${id}/`, {
+        method: 'DELETE',
+      }),
+
+    createBlog: (data: FormData) =>
+      request<any>('/api/blogs/', {
+        method: 'POST',
+        body: data,
+      }),
+
+    deleteBlog: (id: number) =>
+      request<void>(`/api/blogs/${id}/`, {
+        method: 'DELETE',
+      }),
+  },
 };
