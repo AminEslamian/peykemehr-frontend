@@ -33,7 +33,7 @@ The frontend application is almost done for the the beta version. The following 
 
 ---
 
-### 3. Make National ID Optional in Registration & Models (`accounts`)
+### 3. Make National ID Optional in Registration & Models (`accounts`) or remove it completely! (Mr. Karami said we won't be getting national codes)
 * **Priority Context:** Requirement: *"کد ملی گرفته نشود"* (Do not require National ID during registration).
 * **Files:**
   - `accounts/models.py` -> `Teacher` model (`national_id` field)
@@ -57,7 +57,7 @@ The frontend application is almost done for the the beta version. The following 
 
 ---
 
-### 4. Separate Admins from Teachers in Admin Panel
+### 4. Separate Admins from Teachers in Admin Panel (Suggestion only)
 * **Priority Context:** Requirement: *"پنل ادمین (+= مدیریت) برای کاربر سطح مدیر"* (Role isolation in the management console).
 * **File:** `adminpanel/views.py` -> `AdminTeacherViewSet`
 * **Issue:** `AdminTeacherViewSet.queryset = Teacher.objects.all().order_by("-id")` currently includes superusers and staff accounts in the teacher directory table.
@@ -86,7 +86,7 @@ The frontend application is almost done for the the beta version. The following 
 
 ---
 
-### 6. Add SimpleJWT Token Refresh Endpoint (`token/refresh`)
+### 6. Add SimpleJWT Token Refresh Endpoint (`token/refresh`) - AI's suggestion only
 * **File:** `config/urls.py` or `accounts/urls.py`
 * **Issue:** JWT refresh tokens are issued upon login, but no endpoint is registered in `urls.py` to exchange them for a new access token when expired.
 * **Recommended Code:**
@@ -120,7 +120,7 @@ The frontend and backend can remain in separate Git repositories (polyrepo archi
 
 ---
 
-### B. Production Deployment Scenarios
+### B. Production Deployment Scenarios (AI Suggestions)
 
 #### Scenario 1 (Recommended): Single-Host Deployment with Nginx Reverse Proxy
 Build the frontend production bundle:
