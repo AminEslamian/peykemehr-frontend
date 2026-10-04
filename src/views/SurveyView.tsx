@@ -44,6 +44,11 @@ interface SurveyDetail {
   has_submitted: boolean;
 }
 
+const toPersianDigits = (n: number | string): string => {
+  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return n.toString().replace(/\d/g, (x) => farsiDigits[parseInt(x, 10)]);
+};
+
 export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
   const [surveys, setSurveys] = useState<SurveyListItem[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -85,6 +90,7 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
     setErrorMsg('');
     setSuccessMsg('');
     setAnswers({});
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
       const detail = await api.getSurveyDetail(id);
@@ -112,6 +118,7 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
     setSurveyDetail(null);
     setErrorMsg('');
     setSuccessMsg('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Text answer change
@@ -166,11 +173,13 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
         if (q.question_type === 'text') {
           if (!a?.text_answer?.trim()) {
             setErrorMsg(`پاسخ به سوال «${q.text}» الزامی است.`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
           }
         } else {
           if (!a?.selected_options || a.selected_options.length === 0) {
             setErrorMsg(`انتخاب گزینه برای سوال «${q.text}» الزامی است.`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
           }
         }
@@ -189,8 +198,10 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
       const res = await api.submitSurvey(surveyDetail.id, payload);
       setSuccessMsg(res.detail || 'پاسخ‌های شما با موفقیت ثبت گردید.');
       setSurveyDetail((prev) => (prev ? { ...prev, has_submitted: true } : null));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setErrorMsg(err.message || 'خطا در ثبت پاسخ‌ها. لطفاً دوباره تلاش کنید.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
     }
@@ -390,13 +401,30 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
 
                   {/* Render Question Inputs based on Type */}
                   {q.question_type === 'text' && (
-                    <textarea
-                      className="form-control"
-                      rows={4}
-                      value={answers[q.id]?.text_answer || ''}
-                      onChange={(e) => handleTextAnswerChange(q.id, e.target.value)}
-                      placeholder="پاسخ خود را در این بخش بنویسید..."
-                    />
+                    <div style={{ marginTop: '12px' }}>
+                      <textarea
+                        className="form-input form-textarea survey-textarea"
+                        rows={4}
+                        value={answers[q.id]?.text_answer || ''}
+                        onChange={(e) => handleTextAnswerChange(q.id, e.target.value)}
+                        placeholder="پاسخ، پیشنهاد یا بازخورد تکمیلی خود را در این بخش بنویسید..."
+                      />
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginTop: '6px',
+                          fontSize: '0.78rem',
+                          color: 'var(--muted-foreground)',
+                        }}
+                      >
+                        <span>{q.is_required ? 'پاسخ به این سوال الزامی است.' : 'پاسخ تشریحی اختیاری است.'}</span>
+                        <span className="persian-num">
+                          {toPersianDigits(answers[q.id]?.text_answer?.length || 0)} کاراکتر
+                        </span>
+                      </div>
+                    </div>
                   )}
 
                   {q.question_type === 'single_choice' && (
