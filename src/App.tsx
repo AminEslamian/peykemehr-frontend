@@ -46,14 +46,14 @@ export const App: React.FC = () => {
       const authed = !!token;
       setIsAuthenticated(authed);
 
-      // Protected route guard
+      // Protected route guard: redirect unauthenticated users to login
       if ((target === 'dashboard' || target === 'survey') && !authed) {
         window.location.hash = '#/login';
         return;
       }
 
-      // Guest only route guard (redirect logged-in users away from login/register)
-      if ((target === 'login' || target === 'register') && authed) {
+      // Authenticated route guard: logged-in educators see dashboard hub instead of landing page / auth pages
+      if (authed && (target === 'home' || target === 'login' || target === 'register')) {
         window.location.hash = '#/dashboard';
         return;
       }

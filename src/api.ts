@@ -134,13 +134,13 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   // Auth
   sendOtp: (phone_number: string) =>
-    request<{ detail: string }>('/api/auth/send-otp/', {
+    request<{ detail: string }>('/api/auth/login/send-otp/', {
       method: 'POST',
       body: JSON.stringify({ phone_number }),
     }),
 
   verifyOtp: (phone_number: string, code: string) =>
-    request<{ access: string; refresh: string; teacher?: any }>('/api/auth/verify-otp/', {
+    request<{ access: string; refresh: string; teacher?: any; redirect_url?: string }>('/api/auth/login/verify-otp/', {
       method: 'POST',
       body: JSON.stringify({ phone_number, code }),
     }),

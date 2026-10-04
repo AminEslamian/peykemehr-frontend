@@ -17,6 +17,12 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
 }) => {
   const handleNavClick = (sectionId?: string) => {
+    if (isAuthenticated) {
+      onNavigate('dashboard');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (!sectionId || sectionId === 'top' || sectionId === 'hero') {
       if (currentView === 'home') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -58,14 +64,6 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <nav className="nav-links">
-          <span
-            className={`nav-link ${currentView === 'home' ? 'active' : ''}`}
-            onClick={() => handleNavClick('top')}
-            role="button"
-            tabIndex={0}
-          >
-            صفحه نخست
-          </span>
           {isAuthenticated ? (
             <>
               <span
@@ -74,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
                 role="button"
                 tabIndex={0}
               >
-                ثبت گزارش
+                میز کار من
               </span>
               <span
                 className={`nav-link ${currentView === 'survey' ? 'active' : ''}`}
@@ -82,11 +80,19 @@ export const Header: React.FC<HeaderProps> = ({
                 role="button"
                 tabIndex={0}
               >
-                نظرسنجی‌ها
+                نظرسنجی‌های دوره‌ای
               </span>
             </>
           ) : (
             <>
+              <span
+                className={`nav-link ${currentView === 'home' ? 'active' : ''}`}
+                onClick={() => handleNavClick('top')}
+                role="button"
+                tabIndex={0}
+              >
+                صفحه نخست
+              </span>
               <span
                 className="nav-link"
                 onClick={() => handleNavClick('journey')}

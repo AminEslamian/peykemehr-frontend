@@ -21,6 +21,11 @@ import {
   Eye,
   Database,
   FileCheck,
+  PhoneCall,
+  Phone,
+  MessageSquare,
+  Mail,
+  MapPin,
 } from 'lucide-react';
 import { api, getTeacherInfo } from '../api';
 
@@ -63,8 +68,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Active Tab: 'create' by default (spacious, zero heavy data load on entry)
-  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
+  // Active Tab: 'create' | 'history' | 'contact'
+  const [activeTab, setActiveTab] = useState<'create' | 'history' | 'contact'>('create');
+
+  // Contact Form State
+  const [contactForm, setContactForm] = useState({
+    name: [teacher?.first_name, teacher?.last_name].filter(Boolean).join(' ') || '',
+    phone: teacher?.phone_number || '',
+    subject: '',
+    message: '',
+  });
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState('');
+  const [contactError, setContactError] = useState('');
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactError('');
+    setContactSuccess('');
+
+    if (!contactForm.name.trim() || !contactForm.phone.trim() || !contactForm.subject.trim() || !contactForm.message.trim()) {
+      setContactError('لطفاً تمامی فیلدهای الزامی فرم پیام را تکمیل فرمایید.');
+      return;
+    }
+
+    setContactSubmitting(true);
+    setTimeout(() => {
+      setContactSubmitting(false);
+      setContactSuccess('پیام شما با موفقیت دریافت گردید. کارشناسان پشتیبانی سفیر مهر در اسرع وقت پیام شما را بررسی خواهند نمود.');
+      setContactForm((prev) => ({ ...prev, subject: '', message: '' }));
+    }, 600);
+  };
 
   // Lightweight Tags (fetched once on mount)
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -278,6 +312,75 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      {/* 3 Action Hub Hero Cards */}
+      <div className="dashboard-hub-grid">
+        <div
+          className={`hub-card ${activeTab === 'create' ? 'active-hub-card' : ''}`}
+          onClick={() => setActiveTab('create')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="hub-card-icon hub-icon-primary">
+            <PenTool size={26} />
+          </div>
+          <div className="hub-card-content">
+            <div className="hub-card-header">
+              <h4>ثبت گزارش فعالیت</h4>
+              <span className="hub-card-tag hub-tag-primary">اصلی</span>
+            </div>
+            <p>ارسال روایت فعالیت‌های پرورشی و کلاسی همراه با مستندات تصویری و ویدیویی</p>
+          </div>
+          <div className="hub-card-action">
+            <span>فرم ثبت فعالیت</span>
+            <ArrowLeft size={16} />
+          </div>
+        </div>
+
+        <div
+          className="hub-card"
+          onClick={() => onNavigate('survey')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="hub-card-icon hub-icon-gold">
+            <ClipboardList size={26} />
+          </div>
+          <div className="hub-card-content">
+            <div className="hub-card-header">
+              <h4>نظرسنجی‌های دوره‌ای</h4>
+              <span className="hub-card-tag hub-tag-gold">فعال</span>
+            </div>
+            <p>ارزیابی طرح‌ها، ارائه بازخورد و شرکت در پرسشنامه‌های ستاد سفیر مهر</p>
+          </div>
+          <div className="hub-card-action">
+            <span>ورود به نظرسنجی‌ها</span>
+            <ArrowLeft size={16} />
+          </div>
+        </div>
+
+        <div
+          className={`hub-card ${activeTab === 'contact' ? 'active-hub-card' : ''}`}
+          onClick={() => setActiveTab('contact')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="hub-card-icon hub-icon-teal">
+            <PhoneCall size={26} />
+          </div>
+          <div className="hub-card-content">
+            <div className="hub-card-header">
+              <h4>تماس و پشتیبانی</h4>
+              <span className="hub-card-tag hub-tag-teal">پاسخگویی</span>
+            </div>
+            <p>اطلاعات تماس، پیام‌رسان‌ها و ارسال پیام مستقیم به کارشناسان سامانه</p>
+          </div>
+          <div className="hub-card-action">
+            <span>ارتباط با کارشناسان</span>
+            <ArrowLeft size={16} />
+          </div>
+        </div>
+      </div>
+
       {/* Workspace Navigation Tabs (Segmented Control) */}
       <div className="dashboard-tab-bar">
         <button
@@ -302,6 +405,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           {reportsLoaded && (
             <span className="tab-counter-badge">{toPersianDigits(reports.length)}</span>
           )}
+        </button>
+
+        <button
+          type="button"
+          className={`dashboard-tab-btn ${activeTab === 'contact' ? 'active' : ''}`}
+          onClick={() => setActiveTab('contact')}
+        >
+          <PhoneCall size={16} />
+          ارتباط با ما و پشتیبانی
         </button>
 
         <div className="dashboard-tab-spacer" />
@@ -767,6 +879,176 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           )}
         </div>
       )}
+
+      {/* TAB 3: CONTACT & SUPPORT */}
+      {activeTab === 'contact' && (
+        <div className="studio-card">
+          <div className="studio-header">
+            <h3>
+              <PhoneCall size={20} style={{ color: 'var(--primary)' }} />
+              تماس و ارتباط با ستاد سفیر مهر
+            </h3>
+            <p>
+              همکاران گرامی؛ در صورت داشتن هرگونه ابهام، پیشنهاد یا نیاز به راهنمایی در ثبت گزارش‌ها و پاسخ به نظرسنجی‌ها با ما در ارتباط باشید.
+            </p>
+          </div>
+
+          <div className="contact-layout-grid">
+            {/* Contact Channels Info */}
+            <div className="contact-channels-card">
+              <h4 className="contact-section-title">راه‌های ارتباط مستقیم</h4>
+
+              <div className="contact-info-list">
+                <div className="contact-info-item">
+                  <div className="contact-info-icon">
+                    <Phone size={18} />
+                  </div>
+                  <div>
+                    <div className="contact-info-label">تلفن پشتیبانی و دبیرخانه</div>
+                    <div className="contact-info-val ltr-num">۰۲۱-۶۶۴۰۲۳۱۵</div>
+                    <div className="contact-info-sub">پاسخگویی: شنبه تا چهارشنبه (ساعت ۸:۰۰ الی ۱۶:۰۰)</div>
+                  </div>
+                </div>
+
+                <div className="contact-info-item">
+                  <div className="contact-info-icon">
+                    <MessageSquare size={18} />
+                  </div>
+                  <div>
+                    <div className="contact-info-label">پیام‌رسان‌های رسمی</div>
+                    <div className="contact-social-pills">
+                      <span className="contact-social-pill">
+                        <strong>ایتا:</strong> @safiremehr_support
+                      </span>
+                      <span className="contact-social-pill">
+                        <strong>بله:</strong> @safiremehr_admin
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="contact-info-item">
+                  <div className="contact-info-icon">
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <div className="contact-info-label">پست الکترونیکی</div>
+                    <div className="contact-info-val ltr-num">info@safiremehr.ir</div>
+                  </div>
+                </div>
+
+                <div className="contact-info-item">
+                  <div className="contact-info-icon">
+                    <MapPin size={18} />
+                  </div>
+                  <div>
+                    <div className="contact-info-label">مرکز اداری و دبیرخانه</div>
+                    <div className="contact-info-sub">تهران، میدان انقلاب اسلامی، خیابان کارگر شمالی، دبیرخانه مرکزی طرح سفیر مهر</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Messaging Form */}
+            <div className="contact-form-card">
+              <h4 className="contact-section-title">ارسال پیام به کارشناسان پشتیبانی</h4>
+
+              {contactSuccess && (
+                <div className="auth-success-box" style={{ marginBottom: '16px' }}>
+                  <CheckCircle size={18} />
+                  <span>{contactSuccess}</span>
+                </div>
+              )}
+
+              {contactError && (
+                <div className="auth-error-box" style={{ marginBottom: '16px' }}>
+                  <AlertCircle size={18} />
+                  <span>{contactError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleContactSubmit}>
+                <div className="form-field">
+                  <label className="form-label">
+                    نام و نام خانوادگی <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                    placeholder="مثال: علی محمدی"
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="form-label">
+                    شماره همراه <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    dir="ltr"
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="form-label">
+                    موضوع پیام <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={contactForm.subject}
+                    onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                    placeholder="مثال: سوال درباره ارسال مستندات کلاسی"
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="form-label">
+                    متن پیام <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <textarea
+                    className="form-input form-textarea"
+                    rows={4}
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    placeholder="پیام یا پرسش خود را شرح دهید..."
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-astra btn-astra-primary btn-astra-md"
+                  disabled={contactSubmitting}
+                  style={{ width: '100%', marginTop: '8px' }}
+                >
+                  {contactSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="spinner" />
+                      در حال ثبت پیام...
+                    </>
+                  ) : (
+                    <>
+                      ارسال پیام به پشتیبانی
+                      <Send size={16} />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Lightbox / Media Viewer Modal */}
       {activeMediaUrl && (

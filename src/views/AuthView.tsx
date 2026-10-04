@@ -72,6 +72,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
     city: '',
     village: '',
     school: '',
+    gender: 'man',
     position: 'teacher',
     grade: [] as string[],
   });
@@ -85,12 +86,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
     { value: 'sixth', label: 'پایه ششم' },
   ];
 
-  const handleGradeToggle = (val: string) => {
+  const handleGradeSelect = (val: string) => {
     setRegForm((prev) => ({
       ...prev,
-      grade: prev.grade.includes(val)
-        ? prev.grade.filter((g) => g !== val)
-        : [...prev.grade, val],
+      grade: [val],
     }));
   };
 
@@ -146,8 +145,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
     setError('');
     setSuccessNotice('');
 
-    if (regForm.grade.length === 0) {
-      setError('لطفاً حداقل یک پایه تحصیلی را انتخاب فرمایید.');
+    if (regForm.grade.length !== 1) {
+      setError('لطفاً پایه تحصیلی خود را انتخاب فرمایید.');
       return;
     }
     if (countdown > 0) return;
@@ -427,28 +426,53 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
               </div>
             </div>
 
-            <div className="form-field" style={{ marginTop: '12px' }}>
-              <label className="form-label">
-                سمت در مدرسه <span style={{ color: 'var(--danger)' }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                required
-                value={regForm.position}
-                onChange={(e) => setRegForm({ ...regForm, position: e.target.value })}
-              >
-                <option value="teacher">معلم</option>
-                <option value="principal">مدیر</option>
-                <option value="vice_principal">معاون</option>
-              </select>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px',
+                marginTop: '12px',
+              }}
+            >
+              <div className="form-field">
+                <label className="form-label">
+                  جنسیت <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <select
+                  className="form-select"
+                  required
+                  value={regForm.gender}
+                  onChange={(e) => setRegForm({ ...regForm, gender: e.target.value })}
+                >
+                  <option value="man">مرد</option>
+                  <option value="woman">زن</option>
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">
+                  سمت در مدرسه <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <select
+                  className="form-select"
+                  required
+                  value={regForm.position}
+                  onChange={(e) => setRegForm({ ...regForm, position: e.target.value })}
+                >
+                  <option value="teacher">معلم</option>
+                  <option value="Instructor">مربی</option>
+                  <option value="Amin Program Educator">مربی طرح امین</option>
+                  <option value="Independent Preacher">مبلغ آزاد</option>
+                </select>
+              </div>
             </div>
 
             <div className="form-field" style={{ marginTop: '16px' }}>
               <label className="form-label">
-                پایه‌های تحصیلی تحت تدریس <span style={{ color: 'var(--danger)' }}>*</span>
+                پایه تحصیلی تحت تدریس <span style={{ color: 'var(--danger)' }}>*</span>
                 <small style={{ color: 'var(--muted-foreground)', fontWeight: 'normal' }}>
                   {' '}
-                  (حداقل یک پایه را انتخاب فرمایید)
+                  (لطفاً یک پایه را انتخاب فرمایید)
                 </small>
               </label>
               <div className="grades-grid">
@@ -458,7 +482,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
                     <div
                       key={g.value}
                       className={`grade-chip ${isChecked ? 'checked' : ''}`}
-                      onClick={() => handleGradeToggle(g.value)}
+                      onClick={() => handleGradeSelect(g.value)}
+                      role="button"
+                      tabIndex={0}
                     >
                       <span>{g.label}</span>
                       {isChecked && <Check size={16} />}
