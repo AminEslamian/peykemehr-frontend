@@ -42,6 +42,16 @@ export const setTeacherInfo = (info: any) => {
   localStorage.setItem('teacher_info', JSON.stringify(info));
 };
 
+// Safe media URL resolver to route through Vite proxy without CORS/host mismatch
+export const resolveMediaUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  const cleaned = url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, '');
+  if (cleaned.startsWith('/')) {
+    return cleaned;
+  }
+  return `/media/${cleaned}`;
+};
+
 function translateApiError(detail: any, status?: number): string {
   if (status === 429) {
     return 'لطفاً ۱ دقیقه صبر کنید و سپس مجدداً درخواست ارسال کد نمایید.';
@@ -144,6 +154,21 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+export interface UserProfile {
+  id?: number;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  province?: string;
+  city?: string;
+  village?: string;
+  school?: string;
+  grade?: any;
+  position?: string;
+  gender?: 'man' | 'woman' | string;
+  national_id?: string | null;
+}
+
 export const api = {
   // Auth
   sendOtp: (phone_number: string) =>
@@ -179,6 +204,7 @@ export const api = {
         id: number;
         text: string;
         tags: Array<{ id: number; name: string }>;
+        other_tag?: string;
         images: Array<{ id: number; image: string; created_at: string }>;
         videos: Array<{ id: number; video: string; created_at: string }>;
         created_at: string;
@@ -197,12 +223,13 @@ export const api = {
     }),
 
   // Profile
-  getProfile: () =>
-    request<{
-      first_name: string;
-      last_name: string;
-      gender: 'man' | 'woman';
-    }>('/api/auth/profile/'),
+  getProfile: () => request<UserProfile>('/api/auth/profile/'),
+
+  updateProfile: (data: Partial<UserProfile>) =>
+    request<UserProfile>('/api/auth/profile/', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   // Points & Gamification
   getPoints: () =>

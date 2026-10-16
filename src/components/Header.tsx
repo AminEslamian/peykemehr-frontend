@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Eye, Shield } from 'lucide-react';
 import { getAccessToken, clearAuth } from '../api';
 import { Logo } from './Logo';
 
@@ -59,7 +59,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleNavClick = (sectionId?: string) => {
     if (isAuthenticated) {
-      onNavigate('dashboard');
+      if (userRole === 'admin') {
+        onNavigate('admin');
+      } else {
+        onNavigate('dashboard');
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -117,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <nav className="nav-links">
           {isAuthenticated ? (
-            currentView === 'admin' || userRole === 'admin' ? (
+            currentView === 'admin' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className="admin-status-badge">
                   پنل مدیریت سیستم سفیر مهر
@@ -137,15 +141,15 @@ export const Header: React.FC<HeaderProps> = ({
                   میز کار من
                 </span>
                 <span
-                  className={`nav-link ${currentView === 'survey' ? 'active' : ''}`}
+                  className={`nav-link ${currentView === 'profile' ? 'active' : ''}`}
                   onClick={() => {
-                    onNavigate('survey');
+                    onNavigate('profile');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   role="button"
                   tabIndex={0}
                 >
-                  نظرسنجی‌های دوره‌ای
+                  پروفایل من
                 </span>
               </>
             )
@@ -181,12 +185,38 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div>
           {isAuthenticated ? (
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              {currentView === 'admin' || userRole === 'admin' ? (
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, padding: '4px 10px', background: 'var(--color-surface-subtle)', borderRadius: '8px' }}>
-                  مدیریت ارشد
-                </span>
-              ) : null}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              {userRole === 'admin' && (
+                currentView === 'admin' ? (
+                  <button
+                    type="button"
+                    className="btn-astra btn-astra-outline btn-astra-sm"
+                    onClick={() => {
+                      onNavigate('dashboard');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    title="مشاهده سامانه از نگاه معلمان و مربیان"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Eye size={15} />
+                    نمای معلمان (میز کار)
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-astra btn-astra-primary btn-astra-sm"
+                    onClick={() => {
+                      onNavigate('admin');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    title="بازگشت به پنل مدیریت ارشد"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Shield size={15} />
+                    پنل مدیریت
+                  </button>
+                )
+              )}
               <button
                 type="button"
                 className="btn-astra btn-astra-danger btn-astra-sm"

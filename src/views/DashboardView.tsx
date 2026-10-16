@@ -28,8 +28,11 @@ import {
   MapPin,
   Inbox,
   Bell,
+  User,
+  Edit3,
 } from 'lucide-react';
 import { api, getTeacherInfo } from '../api';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 interface DashboardViewProps {
   onNavigate: (view: string) => void;
@@ -44,6 +47,7 @@ interface ReportItem {
   id: number;
   text: string;
   tags: TagItem[];
+  other_tag?: string;
   images: Array<{ id: number; image: string; created_at: string }>;
   videos: Array<{ id: number; video: string; created_at: string }>;
   created_at: string;
@@ -168,11 +172,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   // Form states
   const [reportText, setReportText] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [otherTag, setOtherTag] = useState('');
+  const [isOtherTagActive, setIsOtherTagActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteReportTargetId, setDeleteReportTargetId] = useState<number | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
+  const [isTickerDismissed, setIsTickerDismissed] = useState(false);
 
   // Lightbox modal state for viewing images/videos
   const [activeMediaUrl, setActiveMediaUrl] = useState<string | null>(null);
@@ -190,7 +199,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     api.getPoints().then(setPointsData).catch(() => {});
 
     // 4. Announcements
-    api.getBlogs().then(setBlogs).catch(() => {});
+    api
+      .getBlogs()
+      .then((data: any) => {
+        if (Array.isArray(data)) setBlogs(data);
+        else if (data && Array.isArray(data.results)) setBlogs(data.results);
+        else setBlogs([]);
+      })
+      .catch(() => setBlogs([]));
 
     // 5. Support tickets
     setLoadingTickets(true);
@@ -217,6 +233,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     setSelectedTagIds((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     );
+  };
+
+  // Toggle other_tag custom topic (clears text state when closed)
+  const handleToggleOtherTag = () => {
+    if (isOtherTagActive) {
+      setIsOtherTagActive(false);
+      setOtherTag('');
+    } else {
+      setIsOtherTagActive(true);
+    }
   };
 
   // File selection
@@ -272,6 +298,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       return;
     }
 
+    if (selectedTagIds.length === 0 && !otherTag.trim()) {
+      setSubmitError('لطفاً حداقل یک برچسب موضوعی انتخاب نمایید یا در بخش «سایر»، عنوان فعالیت کلاسی خود را مشخص فرمایید.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -282,6 +313,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         formData.append('tags', id.toString());
       });
 
+      if (otherTag.trim()) {
+        formData.append('other_tag', otherTag.trim());
+      }
+
       selectedFiles.forEach((file) => {
         formData.append('media', file);
       });
@@ -291,6 +326,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       setSubmitSuccess('گزارش فعالیت شما با موفقیت در سامانه پیک مهر ثبت گردید.');
       setReportText('');
       setSelectedTagIds([]);
+      setOtherTag('');
+      setIsOtherTagActive(false);
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
@@ -322,18 +359,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     }
   };
 
-  // Delete Report
-  const handleDeleteReport = async (id: number) => {
-    if (!window.confirm('آیا از حذف این گزارش فعالیت اطمینان دارید؟')) return;
+  // Delete Report Confirmation Handlers
+  const handleOpenDeleteReportConfirm = (id: number) => {
+    setDeleteReportTargetId(id);
+  };
 
-    setDeletingId(id);
+  const handleConfirmDeleteReport = async () => {
+    if (!deleteReportTargetId) return;
+
+    setIsDeletingReport(true);
     try {
-      await api.deleteReport(id);
-      setReports((prev) => prev.filter((r) => r.id !== id));
+      await api.deleteReport(deleteReportTargetId);
+      setReports((prev) => prev.filter((r) => r.id !== deleteReportTargetId));
+      setDeleteReportTargetId(null);
     } catch (err: any) {
-      alert(err.message || 'خطا در حذف گزارش');
+      setReportsError(err.message || 'خطا در حذف گزارش');
     } finally {
-      setDeletingId(null);
+      setIsDeletingReport(false);
     }
   };
 
@@ -360,16 +402,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   ].filter(Boolean).join(' ');
   const teacherInitial = (profile?.first_name || teacher?.first_name)?.[0] || '';
 
+  const rawGrades = profile?.grade || teacher?.grade;
+  const gradeDisplay = Array.isArray(rawGrades) && rawGrades.length > 0
+    ? rawGrades.map((g: any) => {
+        const val = typeof g === 'string' ? g : g.value || String(g);
+        const map: Record<string, string> = {
+          first: 'پایه اول',
+          second: 'پایه دوم',
+          third: 'پایه سوم',
+          fourth: 'پایه چهارم',
+          fifth: 'پایه پنجم',
+          sixth: 'پایه ششم',
+        };
+        return map[val] || val;
+      }).join('، ')
+    : '';
+
   return (
     <div className="main-wrapper">
-      {/* Educator Profile Bar (Clean, Dignified, No broken letters) */}
+      {/* Educator Profile Bar (Clean, Dignified, Streamlined) */}
       <div className="educator-profile-bar">
         <div className="educator-profile-main">
           <div className="educator-avatar">
             {teacherInitial ? (
               <span>{teacherInitial}</span>
             ) : (
-              <GraduationCap size={26} />
+              <GraduationCap size={24} />
             )}
           </div>
 
@@ -378,13 +436,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               {educatorDisplayName ? `${educatorDisplayName} گرامی` : 'همکار ارجمند، به میز کار پیک مهر خوش آمدید'}
               <span className="educator-status-pill">
                 <span className="status-dot" />
-                حساب تأییدشده
+                حساب فعال
               </span>
             </h2>
             <p className="educator-meta-row">
-              {teacher?.school ? `محل خدمت: ${teacher.school} · ` : ''}
-              {teacher?.phone_number ? `شماره همراه: ${teacher.phone_number} · ` : ''}
-              فضای ثبت تجارب، ارسال مستندات کلاسی و ارتقای فعالیت‌های تربیتی
+              <span>{profile?.school || teacher?.school || 'محل خدمت: مدرسه ابتدایی'}</span>
+              {(profile?.province || profile?.city || teacher?.province || teacher?.city) && (
+                <span> · {[profile?.province || teacher?.province, profile?.city || teacher?.city].filter(Boolean).join(' - ')}</span>
+              )}
+              {gradeDisplay && (
+                <span> · {gradeDisplay}</span>
+              )}
+              {teacher?.phone_number && (
+                <span> · {teacher.phone_number}</span>
+              )}
             </p>
           </div>
         </div>
@@ -397,7 +462,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             role="button"
             tabIndex={0}
           >
-            <Sparkles size={16} />
+            <Sparkles size={15} />
             <span>مجموع امتیازات:</span>
             <strong>{toPersianDigits(pointsData.total)}</strong>
             <span className="points-unit">امتیاز</span>
@@ -406,110 +471,59 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <button
             type="button"
             className="btn-astra btn-astra-outline btn-astra-sm"
-            onClick={() => onNavigate('survey')}
+            onClick={() => onNavigate('profile')}
+            title="مشاهده و ویرایش مشخصات فردی و شغلی"
           >
-            <ClipboardList size={16} />
-            نظرسنجی‌های فعال
+            <Edit3 size={14} />
+            ویرایش مشخصات
           </button>
         </div>
       </div>
 
-      {/* 3 Action Hub Hero Cards */}
-      <div className="dashboard-hub-grid">
-        <div
-          className={`hub-card ${activeTab === 'create' ? 'active-hub-card' : ''}`}
-          onClick={() => handleTabSwitch('create')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="hub-card-icon hub-icon-primary">
-            <PenTool size={26} />
-          </div>
-          <div className="hub-card-content">
-            <div className="hub-card-header">
-              <h4>ثبت گزارش فعالیت</h4>
-              <span className="hub-card-tag hub-tag-primary">اصلی</span>
+      {/* Sleek, Non-Intrusive Announcement Ticker (Links to Dedicated Blog Page) */}
+      {Array.isArray(blogs) && blogs.length > 0 && blogs[0]?.title && !isTickerDismissed && (
+        <div className="dashboard-announcement-ticker">
+          <div className="dashboard-ticker-content">
+            <div className="dashboard-ticker-icon">
+              <Bell size={16} />
             </div>
-            <p>ارسال روایت فعالیت‌های پرورشی و کلاسی همراه با مستندات تصویری و ویدیویی</p>
+            <span className="dashboard-ticker-title">
+              اطلاعیه جدید دبیرخانه: {blogs[0].title}
+            </span>
           </div>
-          <div className="hub-card-action">
-            <span>فرم ثبت فعالیت</span>
-            <ArrowLeft size={16} />
-          </div>
-        </div>
 
-        <div
-          className="hub-card"
-          onClick={() => onNavigate('survey')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="hub-card-icon hub-icon-gold">
-            <ClipboardList size={26} />
-          </div>
-          <div className="hub-card-content">
-            <div className="hub-card-header">
-              <h4>نظرسنجی‌های دوره‌ای</h4>
-              <span className="hub-card-tag hub-tag-gold">فعال</span>
-            </div>
-            <p>ارزیابی طرح‌ها، ارائه بازخورد و شرکت در پرسشنامه‌های ستاد سفیر مهر</p>
-          </div>
-          <div className="hub-card-action">
-            <span>ورود به نظرسنجی‌ها</span>
-            <ArrowLeft size={16} />
-          </div>
-        </div>
-
-        <div
-          className={`hub-card ${activeTab === 'contact' ? 'active-hub-card' : ''}`}
-          onClick={() => handleTabSwitch('contact')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="hub-card-icon hub-icon-teal">
-            <PhoneCall size={26} />
-          </div>
-          <div className="hub-card-content">
-            <div className="hub-card-header">
-              <h4>تماس و پشتیبانی</h4>
-              <span className="hub-card-tag hub-tag-teal">پاسخگویی</span>
-            </div>
-            <p>اطلاعات تماس، پیام‌رسان‌ها و ارسال پیام مستقیم به مدیریت سامانه</p>
-          </div>
-          <div className="hub-card-action">
-            <span>ارتباط با پشتیبانی و مدیریت</span>
-            <ArrowLeft size={16} />
-          </div>
-        </div>
-      </div>
-
-      {/* Announcements & News from Administration */}
-      {blogs.length > 0 && (
-        <div className="announcements-banner">
-          <div className="announcements-header">
-            <Bell size={18} style={{ color: '#b8a26d' }} />
-            <h4>آخرین اطلاعیه‌ها و پیام‌های دبیرخانه پویش</h4>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {blogs.map((b) => (
-              <div key={b.id} className="announcement-item">
-                <div className="announcement-title">{b.title}</div>
-                <div className="announcement-content">{b.content}</div>
-              </div>
-            ))}
+          <div className="dashboard-ticker-actions">
+            <button
+              type="button"
+              className="dashboard-ticker-btn"
+              onClick={() => onNavigate('blog')}
+              title="مشاهده تمام اطلاعیه‌ها و پوسترهای پویش"
+            >
+              <span>مشاهده اطلاعیه‌ها ({toPersianDigits(blogs.length)})</span>
+              <ArrowLeft size={14} />
+            </button>
+            <button
+              type="button"
+              className="dashboard-ticker-close"
+              onClick={() => setIsTickerDismissed(true)}
+              title="بستن این پیام"
+              aria-label="بستن پیام"
+            >
+              <X size={15} />
+            </button>
           </div>
         </div>
       )}
 
-      {/* Workspace Navigation Tabs (Segmented Control) */}
+      {/* Workspace Navigation Tabs (Segmented Control - Mobile-Safe) */}
       <div className="dashboard-tab-bar" ref={tabBarRef}>
         <button
           type="button"
           className={`dashboard-tab-btn ${activeTab === 'create' ? 'active' : ''}`}
           onClick={() => handleTabSwitch('create')}
         >
-          <PenTool size={16} />
-          ثبت گزارش فعالیت جدید
+          <PenTool size={15} />
+          ثبت روایت
         </button>
 
         <button
@@ -520,11 +534,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             if (!reportsLoaded) handleLoadReports();
           }}
         >
-          <FolderArchive size={16} />
-          سوابق و بایگانی گزارش‌ها
-          {reportsLoaded && (
+          <FolderArchive size={15} />
+          سوابق
+          {reportsLoaded && reports.length > 0 && (
             <span className="tab-counter-badge">{toPersianDigits(reports.length)}</span>
           )}
+        </button>
+
+        <button
+          type="button"
+          className="dashboard-tab-btn"
+          onClick={() => onNavigate('survey')}
+        >
+          <ClipboardList size={15} />
+          نظرسنجی
         </button>
 
         <button
@@ -532,20 +555,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           className={`dashboard-tab-btn ${activeTab === 'contact' ? 'active' : ''}`}
           onClick={() => handleTabSwitch('contact')}
         >
-          <PhoneCall size={16} />
-          ارتباط با ما و پشتیبانی
-        </button>
-
-        <div className="dashboard-tab-spacer" />
-
-        <button
-          type="button"
-          className="dashboard-tab-btn dashboard-tab-btn-ghost"
-          onClick={() => onNavigate('survey')}
-        >
-          <Sparkles size={15} />
-          ورود به نظرسنجی‌ها
-          <ArrowLeft size={14} />
+          <PhoneCall size={15} />
+          پشتیبانی
         </button>
       </div>
 
@@ -607,19 +618,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 onChange={(e) => setReportText(e.target.value)}
                 placeholder="توضیح دهید چه فعالیتی با دانش‌آموزان انجام شد، بازخورد آنان چه بود و چه دستاورد تربیتی یا آموزشی حاصل گردید..."
                 style={{ resize: 'vertical', minHeight: '160px', lineHeight: '2' }}
-                required
               />
               <div
                 style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  justifyContent: 'flex-end',
                   alignItems: 'center',
                   marginTop: '6px',
                   fontSize: '0.78rem',
                   color: 'var(--muted-foreground)',
                 }}
               >
-                <span>روایت‌های همراه با جزئیات اثرگذاری بیشتری در ارزیابی دارند.</span>
                 <span className="persian-num">{toPersianDigits(reportText.length)} کاراکتر</span>
               </div>
             </div>
@@ -629,53 +638,104 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <TagIcon size={15} style={{ color: 'var(--primary)' }} />
-                  موضوع فعالیت (انتخاب برچسب‌ها)
+                  موضوع فعالیت کلاسی <span style={{ color: 'var(--danger)' }}>*</span>
                 </span>
-                {selectedTagIds.length > 0 && (
+                {(selectedTagIds.length > 0 || otherTag.trim()) && (
                   <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
-                    {toPersianDigits(selectedTagIds.length)} برچسب انتخاب‌شده
+                    {toPersianDigits(selectedTagIds.length + (otherTag.trim() ? 1 : 0))} موضوع انتخاب‌شده
                   </span>
                 )}
               </label>
-              {tags.length > 0 ? (
-                <div className="tag-chips">
-                  {tags.map((tag) => {
-                    const isSelected = selectedTagIds.includes(tag.id);
-                    return (
-                      <span
-                        key={tag.id}
-                        className={`tag-chip ${isSelected ? 'selected' : ''}`}
-                        onClick={() => toggleTag(tag.id)}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        {isSelected && '✓ '}
-                        {tag.name}
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={{ fontSize: '0.82rem', color: 'var(--muted-foreground)', background: '#f8faf6', padding: '8px 12px', borderRadius: '8px', border: '1px dashed var(--border)' }}>
-                  هنوز برچسب موضوعی در پایگاه داده ثبت نشده است.
+
+              <div className="tag-chips">
+                {tags.map((tag) => {
+                  const isSelected = selectedTagIds.includes(tag.id);
+                  return (
+                    <span
+                      key={tag.id}
+                      className={`tag-chip ${isSelected ? 'selected' : ''}`}
+                      onClick={() => toggleTag(tag.id)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {isSelected && '✓ '}
+                      {tag.name}
+                    </span>
+                  );
+                })}
+
+                <span
+                  className={`tag-chip tag-chip-other ${isOtherTagActive ? 'selected' : ''}`}
+                  onClick={handleToggleOtherTag}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {isOtherTagActive && '✓ '}
+                  ✨ سایر (موضوع دلخواه)
+                </span>
+              </div>
+
+              {/* Custom Topic Input Field - Shown ONLY when toggled active */}
+              {isOtherTagActive && (
+                <div className="other-tag-input-box">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label
+                      htmlFor="otherTagInput"
+                      style={{
+                        fontSize: '0.84rem',
+                        fontWeight: 700,
+                        color: 'var(--foreground)',
+                      }}
+                    >
+                      عنوان موضوع دلخواه (سایر)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleToggleOtherTag}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--muted-foreground)',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        padding: '2px 6px',
+                      }}
+                    >
+                      انصراف
+                    </button>
+                  </div>
+
+                  <input
+                    id="otherTagInput"
+                    type="text"
+                    className="form-input"
+                    placeholder="مثال: اردوی زیارتی، پویش کتابخوانی، جشن تکلیف، طرح همدلی دانش‌آموزی..."
+                    maxLength={100}
+                    value={otherTag}
+                    onChange={(e) => setOtherTag(e.target.value)}
+                    autoFocus
+                  />
                 </div>
               )}
             </div>
 
-            {/* Media Upload Dropzone */}
+            {/* Media Upload Dropzone (Compact & Touch-Friendly: 64-72px) */}
             <div className="form-field">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ImageIcon size={15} style={{ color: 'var(--primary)' }} />
                 ضمیمه عکس یا ویدیو (مستندات کلاسی)
+                <small style={{ color: 'var(--muted-foreground)', fontWeight: 'normal' }}>(اختیاری)</small>
               </label>
               <div
-                className="upload-dropzone"
+                className="upload-dropzone-compact"
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
                   handleFiles(e.dataTransfer.files);
                 }}
+                role="button"
+                tabIndex={0}
               >
                 <input
                   type="file"
@@ -683,15 +743,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   multiple
                   accept="image/*,video/*"
                   onChange={(e) => handleFiles(e.target.files)}
+                  style={{ display: 'none' }}
                 />
-                <div className="upload-dropzone-icon">
-                  <Upload size={24} />
+                <div className="upload-compact-btn">
+                  <Upload size={16} />
+                  <span>انتخاب عکس یا فیلم</span>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--foreground)' }}>
-                  انتخاب فایل‌ها یا کشیدن و رها کردن در این قسمت
-                </div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--muted-foreground)', marginTop: '6px' }}>
-                  پشتیبانی از تصاویر (JPG، PNG، WEBP) و ویدیوها (MP4، WEBM)
+                <div className="upload-compact-hint">
+                  یا کشیدن و رها کردن فایل‌ها (حداکثر ۱۰ فایل)
                 </div>
               </div>
 
@@ -766,6 +825,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 onClick={() => {
                   setReportText('');
                   setSelectedTagIds([]);
+                  setOtherTag('');
+                  setIsOtherTagActive(false);
                   setSelectedFiles([]);
                   setSubmitSuccess('');
                   setSubmitError('');
@@ -904,32 +965,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                             {formatDate(report.created_at)}
                           </span>
 
-                          {report.tags && report.tags.length > 0 && (
+                          {((report.tags && report.tags.length > 0) || report.other_tag) && (
                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                              {report.tags.map((tag) => (
+                              {report.tags && report.tags.map((tag) => (
                                 <span key={tag.id} className="history-tag-badge">
                                   #{tag.name}
                                 </span>
                               ))}
+                              {report.other_tag && (
+                                <span
+                                  className="history-tag-badge"
+                                  style={{
+                                    background: 'var(--gold-tag)',
+                                    color: '#715414',
+                                    border: '1px solid var(--gold-border)',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  #{report.other_tag} (سایر)
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
 
                         <button
                           type="button"
-                          onClick={() => handleDeleteReport(report.id)}
-                          disabled={deletingId === report.id}
+                          onClick={() => handleOpenDeleteReportConfirm(report.id)}
+                          disabled={isDeletingReport && deleteReportTargetId === report.id}
                           className="history-delete-btn"
                           title="حذف این گزارش"
                         >
-                          {deletingId === report.id ? (
-                            <Loader2 size={15} className="spinner" />
-                          ) : (
-                            <>
-                              <Trash2 size={15} />
-                              حذف گزارش
-                            </>
-                          )}
+                          <Trash2 size={15} />
+                          حذف گزارش
                         </button>
                       </div>
 
@@ -1098,13 +1166,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     value={contactForm.name}
                     onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                     placeholder="مثال: علی محمدی"
-                    required
                   />
                 </div>
 
                 <div className="form-field">
                   <label className="form-label">
-                    شماره همراه <span style={{ color: 'var(--danger)' }}>*</span>
+                    شماره همراه
                   </label>
                   <input
                     type="tel"
@@ -1113,7 +1180,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     value={contactForm.phone}
                     onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
                     placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                    required
                   />
                 </div>
 
@@ -1127,7 +1193,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     value={contactForm.subject}
                     onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
                     placeholder="مثال: سوال درباره ارسال مستندات کلاسی"
-                    required
                   />
                 </div>
 
@@ -1141,7 +1206,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     value={contactForm.message}
                     onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     placeholder="پیام یا پرسش خود را شرح دهید..."
-                    required
                   />
                 </div>
 
@@ -1341,6 +1405,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      {/* Custom Native Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteReportTargetId !== null}
+        title="حذف گزارش فعالیت"
+        message="آیا از حذف این گزارش فعالیت اطمینان دارید؟ کلیه توضیحات و فایل‌های رسانه‌ای پیوست آن حذف شده و این عملیات قابل بازگشت نخواهد بود."
+        confirmText="حذف قطعی"
+        cancelText="انصراف"
+        variant="danger"
+        loading={isDeletingReport}
+        onConfirm={handleConfirmDeleteReport}
+        onCancel={() => {
+          if (!isDeletingReport) {
+            setDeleteReportTargetId(null);
+          }
+        }}
+      />
     </div>
   );
 };

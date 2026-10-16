@@ -6,9 +6,11 @@ import { AuthView } from './views/AuthView';
 import { DashboardView } from './views/DashboardView';
 import { SurveyView } from './views/SurveyView';
 import { AdminView } from './views/AdminView';
+import { ProfileView } from './views/ProfileView';
+import { BlogView } from './views/BlogView';
 import { getAccessToken, clearAuth, getUserRole } from './api';
 
-export type ViewType = 'home' | 'login' | 'register' | 'dashboard' | 'survey' | 'admin';
+export type ViewType = 'home' | 'login' | 'register' | 'dashboard' | 'survey' | 'admin' | 'profile' | 'blog';
 
 export const App: React.FC = () => {
   const getHashView = (): ViewType => {
@@ -18,6 +20,8 @@ export const App: React.FC = () => {
     if (hash === 'dashboard') return 'dashboard';
     if (hash === 'survey') return 'survey';
     if (hash === 'admin') return 'admin';
+    if (hash === 'profile') return 'profile';
+    if (hash === 'blog' || hash === 'announcements') return 'blog';
     return 'home';
   };
 
@@ -59,29 +63,21 @@ export const App: React.FC = () => {
       setUserRoleState(role);
 
       // Protected route guard: redirect unauthenticated users to login
-      if ((target === 'dashboard' || target === 'survey' || target === 'admin') && !authed) {
+      if ((target === 'dashboard' || target === 'survey' || target === 'admin' || target === 'profile' || target === 'blog') && !authed) {
         window.location.hash = '#/login';
         return;
       }
 
-      // Role isolation: Admin users must NEVER see educator pages (dashboard / survey) or landing/login
-      if (authed && role === 'admin') {
-        if (target === 'dashboard' || target === 'survey' || target === 'home' || target === 'login' || target === 'register') {
-          window.location.hash = '#/admin';
-          return;
-        }
+      // If authenticated user visits login or register, redirect to appropriate view
+      if (authed && (target === 'login' || target === 'register')) {
+        window.location.hash = role === 'admin' ? '#/admin' : '#/dashboard';
+        return;
       }
 
-      // Role isolation: Standard teachers must NEVER enter admin panel
-      if (authed && role === 'teacher') {
-        if (target === 'admin') {
-          window.location.hash = '#/dashboard';
-          return;
-        }
-        if (target === 'home' || target === 'login' || target === 'register') {
-          window.location.hash = '#/dashboard';
-          return;
-        }
+      // Role security: Standard teachers must NEVER enter admin panel
+      if (authed && role === 'teacher' && target === 'admin') {
+        window.location.hash = '#/dashboard';
+        return;
       }
 
       setCurrentView(target);
@@ -137,7 +133,11 @@ export const App: React.FC = () => {
 
         {currentView === 'dashboard' && <DashboardView onNavigate={navigateTo} />}
 
+        {currentView === 'profile' && <ProfileView onNavigate={navigateTo} />}
+
         {currentView === 'survey' && <SurveyView onNavigate={navigateTo} />}
+
+        {currentView === 'blog' && <BlogView onNavigate={navigateTo} />}
 
         {currentView === 'admin' && <AdminView onNavigate={navigateTo} />}
       </main>

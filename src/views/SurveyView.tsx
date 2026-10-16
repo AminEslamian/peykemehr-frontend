@@ -222,6 +222,34 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
 
   return (
     <div className="main-wrapper" style={{ maxWidth: '900px' }}>
+      {/* Top Breadcrumb & Back bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => onNavigate('dashboard')}
+            className="btn-astra btn-astra-outline btn-astra-sm"
+            style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+          >
+            <ArrowRight size={15} />
+            بازگشت به میز کار
+          </button>
+          <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>/</span>
+          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--foreground)' }}>
+            نظرسنجی‌ها و ارزیابی‌های دوره‌ای
+          </span>
+        </div>
+      </div>
+
       {/* View Header */}
       <div style={{ marginBottom: '32px' }}>
         <span className="eyebrow">

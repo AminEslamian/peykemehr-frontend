@@ -156,7 +156,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
 
     setLoading(true);
     try {
-      await api.registerSendOtp(regForm);
+      const cleanForm = {
+        ...regForm,
+        national_id: regForm.national_id.trim() || '',
+        phone_number: regForm.phone_number.trim(),
+        first_name: regForm.first_name.trim(),
+        last_name: regForm.last_name.trim(),
+        province: regForm.province.trim(),
+        city: regForm.city.trim(),
+        school: regForm.school.trim(),
+        village: regForm.village.trim(),
+      };
+      await api.registerSendOtp(cleanForm);
       setStep('otp');
       setCountdown(60);
       setSuccessNotice('کد تأیید با موفقیت ارسال گردید.');
@@ -180,7 +191,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
       if (mode === 'login') {
         await api.sendOtp(loginPhone.trim());
       } else {
-        await api.registerSendOtp(regForm);
+        const cleanForm = {
+          ...regForm,
+          national_id: regForm.national_id.trim() || '',
+          phone_number: regForm.phone_number.trim(),
+          first_name: regForm.first_name.trim(),
+          last_name: regForm.last_name.trim(),
+          province: regForm.province.trim(),
+          city: regForm.city.trim(),
+          school: regForm.school.trim(),
+          village: regForm.village.trim(),
+        };
+        await api.registerSendOtp(cleanForm);
       }
       setCountdown(60);
       setSuccessNotice('کد تأیید جدید با موفقیت پیامک شد.');
@@ -205,7 +227,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
 
     setLoading(true);
     try {
-      const res = await api.registerVerifyOtp({ ...regForm, code: otpCode.trim() });
+      const cleanForm = {
+        ...regForm,
+        national_id: regForm.national_id.trim() || '',
+        phone_number: regForm.phone_number.trim(),
+        first_name: regForm.first_name.trim(),
+        last_name: regForm.last_name.trim(),
+        province: regForm.province.trim(),
+        city: regForm.city.trim(),
+        school: regForm.school.trim(),
+        village: regForm.village.trim(),
+      };
+      const res = await api.registerVerifyOtp({ ...cleanForm, code: otpCode.trim() });
       setTokens(res.access, res.refresh);
       if (res.teacher) setTeacherInfo(res.teacher);
       setUserRole('teacher');
@@ -355,22 +388,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
                   required
                   value={regForm.phone_number}
                   onChange={(e) => setRegForm({ ...regForm, phone_number: e.target.value })}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="form-label">
-                  کد ملی ده‌رقمی <span style={{ color: 'var(--danger)' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="کد ملی ۱۰ رقمی"
-                  maxLength={10}
-                  dir="ltr"
-                  required
-                  value={regForm.national_id}
-                  onChange={(e) => setRegForm({ ...regForm, national_id: e.target.value })}
                 />
               </div>
 

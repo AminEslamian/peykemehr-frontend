@@ -1756,13 +1756,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         </p>
 
                         {/* Tags */}
-                        {report.tags && report.tags.length > 0 && (
+                        {((report.tags && report.tags.length > 0) || report.other_tag) && (
                           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                            {report.tags.map((tg: any) => (
+                            {report.tags && report.tags.map((tg: any) => (
                               <span key={tg.id} className="admin-badge admin-badge-neutral" style={{ fontSize: '10px' }}>
                                 #{tg.name}
                               </span>
                             ))}
+                            {report.other_tag && (
+                              <span className="admin-badge" style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', fontWeight: 700 }}>
+                                #{report.other_tag} (سایر)
+                              </span>
+                            )}
                           </div>
                         )}
 
@@ -2633,13 +2638,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             </div>
 
             {/* Tags */}
-            {viewingReport.tags && viewingReport.tags.length > 0 && (
+            {((viewingReport.tags && viewingReport.tags.length > 0) || viewingReport.other_tag) && (
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '8px' }}>برچسب‌های موضوعی:</div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {viewingReport.tags.map((tg: any) => (
+                  {viewingReport.tags && viewingReport.tags.map((tg: any) => (
                     <span key={tg.id} className="admin-badge admin-badge-neutral">#{tg.name}</span>
                   ))}
+                  {viewingReport.other_tag && (
+                    <span className="admin-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', fontWeight: 700 }}>
+                      #{viewingReport.other_tag} (سایر)
+                    </span>
+                  )}
                 </div>
               </div>
             )}
