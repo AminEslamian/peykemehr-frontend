@@ -25,21 +25,19 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         <div className="hero-text">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
             <span className="hero-badge">
-              <Sparkles size={14} /> ویژه سال تحصیلی ۱۴۰۴–۱۴۰۵
+              <Sparkles size={14} /> ویژه ایام فاطمیه - سال ۱۴۰۵
             </span>
             <span className="eyebrow">
-              <span className="line" /> از دل کلاس، برای زندگی
+              <span className="line" /> از دل کلاس، برای آگاهی
             </span>
           </div>
 
           <h1>
-            مهربانی را<br />
-            با هم <em>روایت می‌کنیم.</em>
+            طرح آموزشی فرهنگی زیتون
           </h1>
 
           <p className="hero-desc">
-            سامانه فرهنگی آموزشی پیک مهر؛ همراه مبلغین و معلمین، برای ثبت تجارب ماندگار در کلاس‌های درس و مدارس، ارائه
-            گزارش‌های چندرسانه‌ای و ارتقای فعالیت‌های تربیتی دانش‌آموزان.
+            سامانه تبلیغی پیک‌مهر، همراه معلمین و مربیان، برای ثبت تجارب و لحظات ماندگار ارائه طرح آموزشی فرهنگی زیتون در ایام فاطمیه
           </p>
 
           <div className="hero-actions">
@@ -64,7 +62,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
 
           <div className="hero-features">
             <span className="hero-feature-item">
-              <Check size={16} /> ویژه مبلغین، معلمان و مربیان تربیتی
+              <Check size={16} /> ویژه معلمین و مربیان طرح زیتون
             </span>
             <span className="hero-feature-item">
               <Check size={16} /> ثبت گزارش‌های متنی، عکس و فیلم
@@ -93,11 +91,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               <div className="panel-tagline-badge">فضای هم‌افزایی معلمان و مبلغین</div>
               <h2 className="panel-hero-heading">
                 روایت تجارب تربیتی،<br />
-                <em>در خدمت فردای روشن دانش‌آموزان</em>
+                <em>درخدمت رشد و ارتقای فرهنگ دانش‌آموزان</em>
               </h2>
-              <p className="panel-hero-desc">
-                ثبت فعالیت‌های پرورشی و آموزشی، بارگذاری مستندات چندرسانه‌ای و سنجش بازخوردها
-              </p>
             </div>
 
             <div className="panel-bottom">
@@ -107,8 +102,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               </div>
               <div className="panel-stat-divider" />
               <div className="panel-stat-item">
-                <span className="stat-title">بانک مستندات</span>
-                <span className="stat-desc">آرشیو کلاسی</span>
+                <span className="stat-title">ارسال گزارشات</span>
+                <span className="stat-desc">ثبت جامع و کامل</span>
               </div>
               <div className="panel-stat-divider" />
               <div className="panel-stat-item">
@@ -119,7 +114,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           </div>
 
           <div className="paper-tag">
-            <Heart size={16} /> همراه مطمئن در مسیر تعلیم و تربیت
+            <Heart size={16} /> همراهی شما، گامی موثر در رشد ماست
           </div>
         </div>
       </section>
@@ -145,7 +140,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             {
               num: '۰۲',
               title: 'ثبت تجارب و آثار کلاسی',
-              desc: 'ارسال روایت‌های کلاسی به همراه بارگذاری آسان تصاویر و ویدیوهای فعالیت‌های فرهنگی و تربیتی.',
+              desc: 'ارسال روایت‌های کلاسی به همراه بارگذاری آسان تصاویر و ویدیوهای طرح آموزشی فرهنگی زیتون.',
               icon: FileText,
             },
             {

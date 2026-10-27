@@ -787,7 +787,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
                   نظرسنجی‌های دوره‌ای
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>
-                  پاسخ به پرسش‌های ارزیابی کیفی مدارس و ثبت امتیازات همراهی
+                  پاسخ به پرسش‌های ارزیابی کیفی طرح آموزشی فرهنگی زیتون
                 </p>
               </div>
             </div>

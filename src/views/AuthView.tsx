@@ -260,7 +260,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
             <Logo size={56} variant="icon" />
           </div>
           <span className="eyebrow">
-            <span className="line" /> سامانه مبلغین و معلمین پیک مهر
+            <span className="line" /> سامانه معلمین و مربیان پیک مهر
           </span>
 
           <h1 className="auth-title">
@@ -268,7 +268,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
               ? 'تأیید شماره و ورود'
               : mode === 'login'
               ? 'ورود به حساب کاربری'
-              : 'ایجاد حساب کاربری (مبلغین و معلمین)'}
+              : 'ایجاد حساب کاربری (معلمین و مربیان)'}
           </h1>
 
           <p className="auth-subtitle">

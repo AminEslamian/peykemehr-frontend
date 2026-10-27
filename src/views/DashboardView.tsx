@@ -569,7 +569,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               ثبت و ارسال روایت فعالیت کلاسی
             </h3>
             <p>
-              شرح دستاوردها، اقدامات ابتکاری و تجارب پرورشی خود را همراه با مستندات تصویری ثبت فرمایید.
+              ارسال تصاویر و ویدیو‌های اتفاقات، فعالیت‌ها، تجارب و ... اجرای طرح آموزشی، فرهنگی زیتون.
             </p>
           </div>
 
@@ -616,7 +616,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 rows={6}
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
-                placeholder="توضیح دهید چه فعالیتی با دانش‌آموزان انجام شد، بازخورد آنان چه بود و چه دستاورد تربیتی یا آموزشی حاصل گردید..."
+                placeholder="توضیح دهید رسانه ارسالی شما مربوط به کدام بخش فعالیت‌ها می‌باشد، بازخورد دانش‌آموزان چه بود و چه دستاورد تربیتی یا آموزشی حاصل گردید."
                 style={{ resize: 'vertical', minHeight: '160px', lineHeight: '2' }}
               />
               <div
@@ -849,7 +849,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 <FolderArchive size={20} style={{ color: 'var(--primary)' }} />
                 سوابق و بایگانی فعالیت‌های ثبت‌شده
               </h3>
-              <p>مشاهده، بازبینی و مدیریت گزارش‌های ارسالی شما در طول سال تحصیلی</p>
+              <p>مشاهده، بازبینی و مدیریت گزارش‌های ارسالی شما</p>
             </div>
 
             {reportsLoaded && (

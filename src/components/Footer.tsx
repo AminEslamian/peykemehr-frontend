@@ -21,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <Logo size={38} variant="icon" />
           <div className="footer-copy">
             <span className="footer-brand-title">سامانه پیک مهر</span>
-            <span className="footer-brand-sub">همراه مبلغین و معلمین، برای فردای روشن‌تر دانش‌آموزان</span>
+            <span className="footer-brand-sub">همراه معلمین و مربیان</span>
           </div>
         </div>
 

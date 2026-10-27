@@ -124,7 +124,7 @@ export const Logo: React.FC<LogoProps> = ({
       {IconMark}
       <div className="brand-info">
         <b className="brand-name">پیک مهر</b>
-        {showSubtitle && <small className="brand-subtitle">سامانه مبلغین و معلمین</small>}
+        {showSubtitle && <small className="brand-subtitle">سامانه معلمین و مربیان</small>}
       </div>
     </div>
   );
