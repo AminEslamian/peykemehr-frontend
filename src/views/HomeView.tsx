@@ -88,7 +88,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             </div>
 
             <div className="panel-center">
-              <div className="panel-tagline-badge">فضای هم‌افزایی معلمان و مبلغین</div>
+              <div className="panel-tagline-badge">فضای هم‌افزایی معلمین و مربیان</div>
               <h2 className="panel-hero-heading">
                 روایت تجارب تربیتی،<br />
                 <em>درخدمت رشد و ارتقای فرهنگ دانش‌آموزان</em>
@@ -126,7 +126,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             <span className="line" /> مسیر همراهی
           </span>
           <h2>سه گام تا همراهی در پیک مهر</h2>
-          <p>مسیر ساده و روان برای فعالیت مبلغین و معلمان گرامی در سامانه</p>
+          <p>مسیر ساده و روان برای فعالیت معلمین و مربیان گرامی در سامانه</p>
         </div>
 
         <div className="steps-grid steps-grid-3">
@@ -177,13 +177,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             </span>
           </div>
           <h2>پیش از همراهی بدانید</h2>
-          <p>پاسخ به متداول‌ترین پرسش‌های مبلغین و معلمان پیرامون نحوه کار با سامانه</p>
+          <p>پاسخ به متداول‌ترین پرسش‌های معلمین و مربیان پیرامون نحوه کار با سامانه</p>
         </div>
 
         <div className="faq-list">
           <details className="faq-item" open>
-            <summary>آیا استفاده از سامانه برای مبلغین و معلمان هزینه‌ای دارد؟</summary>
-            <p>خیر؛ ثبت‌نام، ارسال گزارش‌ها و شرکت در نظرسنجی‌ها برای تمامی مبلغین، معلمان و مربیان مدارس کاملاً رایگان است.</p>
+            <summary>آیا استفاده از سامانه برای معلمین و مربیان هزینه‌ای دارد؟</summary>
+            <p>خیر؛ ثبت‌نام، ارسال گزارش‌ها و شرکت در نظرسنجی‌ها برای تمامی معلمین و مربیان مدارس کاملاً رایگان است.</p>
           </details>
 
           <details className="faq-item">

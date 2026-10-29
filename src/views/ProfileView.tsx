@@ -426,7 +426,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
                 }}
               >
                 <ShieldCheck size={16} style={{ color: 'var(--primary)' }} />
-                سامانه مبلغین و معلمان پیک مهر
+                سامانه معلمین و مربیان پیک مهر
               </span>
             </div>
           </div>

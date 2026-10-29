@@ -22,10 +22,7 @@ import {
   Database,
   FileCheck,
   PhoneCall,
-  Phone,
   MessageSquare,
-  Mail,
-  MapPin,
   Inbox,
   Bell,
   User,
@@ -1073,69 +1070,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div className="studio-header">
             <h3>
               <PhoneCall size={20} style={{ color: 'var(--primary)' }} />
-              تماس و ارتباط با ستاد سفیر مهر
+              ارتباط با پشتیبانی
             </h3>
             <p>
               همکاران گرامی؛ در صورت داشتن هرگونه ابهام، پیشنهاد یا نیاز به راهنمایی در ثبت گزارش‌ها و پاسخ به نظرسنجی‌ها با ما در ارتباط باشید.
             </p>
           </div>
 
-          <div className="contact-layout-grid">
-            {/* Contact Channels Info */}
-            <div className="contact-channels-card">
-              <h4 className="contact-section-title">راه‌های ارتباط مستقیم</h4>
-
-              <div className="contact-info-list">
-                <div className="contact-info-item">
-                  <div className="contact-info-icon">
-                    <Phone size={18} />
-                  </div>
-                  <div>
-                    <div className="contact-info-label">تلفن پشتیبانی و دبیرخانه</div>
-                    <div className="contact-info-val ltr-num">۰۲۱-۶۶۴۰۲۳۱۵</div>
-                    <div className="contact-info-sub">پاسخگویی: شنبه تا چهارشنبه (ساعت ۸:۰۰ الی ۱۶:۰۰)</div>
-                  </div>
-                </div>
-
-                <div className="contact-info-item">
-                  <div className="contact-info-icon">
-                    <MessageSquare size={18} />
-                  </div>
-                  <div>
-                    <div className="contact-info-label">پیام‌رسان‌های رسمی</div>
-                    <div className="contact-social-pills">
-                      <span className="contact-social-pill">
-                        <strong>ایتا:</strong> @safiremehr_support
-                      </span>
-                      <span className="contact-social-pill">
-                        <strong>بله:</strong> @safiremehr_admin
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="contact-info-item">
-                  <div className="contact-info-icon">
-                    <Mail size={18} />
-                  </div>
-                  <div>
-                    <div className="contact-info-label">پست الکترونیکی</div>
-                    <div className="contact-info-val ltr-num">info@safiremehr.ir</div>
-                  </div>
-                </div>
-
-                <div className="contact-info-item">
-                  <div className="contact-info-icon">
-                    <MapPin size={18} />
-                  </div>
-                  <div>
-                    <div className="contact-info-label">مرکز اداری و دبیرخانه</div>
-                    <div className="contact-info-sub">تهران، میدان انقلاب اسلامی، خیابان کارگر شمالی، دبیرخانه مرکزی طرح سفیر مهر</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+          <div className="internal-support-container">
             {/* Messaging Form */}
             <div className="contact-form-card">
               <h4 className="contact-section-title">ارسال پیام به مدیریت و پشتیبانی سامانه</h4>

@@ -289,7 +289,7 @@ export const BlogView: React.FC<BlogViewProps> = ({ onNavigate }) => {
                 {/* Card Footer */}
                 <div className="blog-card-footer">
                   <span className="blog-footer-brand">
-                    سامانه مبلغین و معلمان پویش سفیر مهر
+                    سامانه معلمین و مربیان پویش سفیر مهر
                   </span>
                   {mediaUrl && !isVideo && (
                     <button
