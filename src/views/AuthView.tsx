@@ -343,7 +343,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
                 gap: '16px',
               }}
             >
@@ -450,7 +450,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode, onDone, onSwitc
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
                 gap: '16px',
                 marginTop: '12px',
               }}

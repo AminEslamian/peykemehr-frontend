@@ -565,12 +565,12 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
               ))}
 
               {/* Submit Buttons */}
-              <div style={{ display: 'flex', gap: '14px', marginTop: '28px' }}>
+              <div className="form-action-group mobile-stack-buttons" style={{ display: 'flex', gap: '14px', marginTop: '28px', flexWrap: 'wrap' }}>
                 <button
                   type="submit"
-                  className="btn-astra btn-astra-primary btn-astra-lg"
+                  className="btn-astra btn-astra-primary btn-astra-lg form-action-primary"
                   disabled={submitting}
-                  style={{ flex: 1 }}
+                  style={{ flex: '1 1 200px' }}
                 >
                   {submitting ? (
                     <>
@@ -587,7 +587,7 @@ export const SurveyView: React.FC<SurveyViewProps> = ({ onNavigate }) => {
 
                 <button
                   type="button"
-                  className="btn-astra btn-astra-outline btn-astra-lg"
+                  className="btn-astra btn-astra-outline btn-astra-lg form-action-secondary"
                   onClick={handleBackToList}
                   disabled={submitting}
                 >

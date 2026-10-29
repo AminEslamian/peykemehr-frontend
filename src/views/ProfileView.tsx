@@ -447,7 +447,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
           )}
 
           {/* Main Profile Form Card */}
-          <div className="studio-card" style={{ padding: '32px' }}>
+          <div className="studio-card">
             <form onSubmit={handleSave}>
               {/* SECTION 1: IDENTITY & READ-ONLY */}
               <div style={{ marginBottom: '32px' }}>
@@ -480,7 +480,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
                     gap: '16px',
                   }}
                 >
@@ -564,7 +564,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
                     gap: '16px',
                   }}
                 >
@@ -701,6 +701,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
 
               {/* ACTION BUTTONS */}
               <div
+                className="form-action-group mobile-stack-buttons"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -714,8 +715,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="btn-astra btn-astra-primary btn-astra-lg"
-                  style={{ minWidth: '180px' }}
+                  className="btn-astra btn-astra-primary btn-astra-lg form-action-primary"
                 >
                   {saving ? (
                     <>
@@ -734,7 +734,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigate }) => {
                   type="button"
                   onClick={handleReset}
                   disabled={saving}
-                  className="btn-astra btn-astra-outline"
+                  className="btn-astra btn-astra-outline form-action-secondary"
                 >
                   <RotateCcw size={16} />
                   انصراف و بازنشانی

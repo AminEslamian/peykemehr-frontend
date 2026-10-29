@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, LogOut, Eye, Shield } from 'lucide-react';
-import { getAccessToken, clearAuth } from '../api';
+import { createPortal } from 'react-dom';
+import {
+  User,
+  LogOut,
+  Eye,
+  Shield,
+  Menu,
+  X,
+  Home,
+  LayoutDashboard,
+  ClipboardList,
+  Bell,
+  Sparkles,
+} from 'lucide-react';
+import { getAccessToken, clearAuth, getTeacherInfo } from '../api';
 import { Logo } from './Logo';
 
 interface HeaderProps {
@@ -19,8 +32,33 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
 }) => {
   const [activeSection, setActiveSection] = useState<'top' | 'journey' | 'faq'>('top');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isClickScrollingRef = useRef(false);
   const scrollLockTimeoutRef = useRef<number | null>(null);
+  const teacher = isAuthenticated ? getTeacherInfo() : null;
+
+  // Prevent background scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  // Close drawer on escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
 
   // Scroll Spy for Landing Page Sections
   useEffect(() => {
@@ -58,6 +96,8 @@ export const Header: React.FC<HeaderProps> = ({
   }, [currentView]);
 
   const handleNavClick = (sectionId?: string) => {
+    setMobileMenuOpen(false);
+
     if (isAuthenticated) {
       if (userRole === 'admin') {
         onNavigate('admin');
@@ -106,8 +146,19 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const handleDrawerNavigate = (view: string, sectionId?: string) => {
+    setMobileMenuOpen(false);
+    if (sectionId) {
+      handleNavClick(sectionId);
+    } else {
+      onNavigate(view);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <header className="site-header">
+    <>
+      <header className="site-header">
       <div className="header-inner">
         <div
           className="brand-clickable"
@@ -116,9 +167,10 @@ export const Header: React.FC<HeaderProps> = ({
           role="button"
           tabIndex={0}
         >
-          <Logo size={44} showSubtitle={true} />
+          <Logo size={42} showSubtitle={true} />
         </div>
 
+        {/* Desktop Navigation Links */}
         <nav className="nav-links">
           {isAuthenticated ? (
             currentView === 'admin' ? (
@@ -183,14 +235,15 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </nav>
 
-        <div>
+        {/* Header Right Actions */}
+        <div className="header-actions-group">
           {isAuthenticated ? (
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {userRole === 'admin' && (
                 currentView === 'admin' ? (
                   <button
                     type="button"
-                    className="btn-astra btn-astra-outline btn-astra-sm"
+                    className="btn-astra btn-astra-outline btn-astra-sm header-action-btn"
                     onClick={() => {
                       onNavigate('dashboard');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -199,12 +252,12 @@ export const Header: React.FC<HeaderProps> = ({
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Eye size={15} />
-                    نمای معلمان (میز کار)
+                    <span className="header-btn-text">نمای معلمان</span>
                   </button>
                 ) : (
                   <button
                     type="button"
-                    className="btn-astra btn-astra-primary btn-astra-sm"
+                    className="btn-astra btn-astra-primary btn-astra-sm header-action-btn"
                     onClick={() => {
                       onNavigate('admin');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -213,17 +266,18 @@ export const Header: React.FC<HeaderProps> = ({
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Shield size={15} />
-                    پنل مدیریت
+                    <span className="header-btn-text">پنل مدیریت</span>
                   </button>
                 )
               )}
               <button
                 type="button"
-                className="btn-astra btn-astra-danger btn-astra-sm"
+                className="btn-astra btn-astra-danger btn-astra-sm header-logout-btn"
                 onClick={onLogout}
+                title="خروج از حساب کاربری"
               >
                 <LogOut size={15} />
-                خروج
+                <span className="header-btn-text">خروج</span>
               </button>
             </div>
           ) : (
@@ -236,8 +290,202 @@ export const Header: React.FC<HeaderProps> = ({
               ورود به سامانه
             </button>
           )}
+
+          {/* Mobile Hamburger Menu Toggle Button */}
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="منوی ناوبری"
+            aria-expanded={mobileMenuOpen}
+            title="منوی ناوبری"
+          >
+            <Menu size={22} />
+          </button>
         </div>
       </div>
     </header>
+
+    {/* Mobile Off-Canvas Drawer Portal */}
+    {typeof document !== 'undefined' &&
+      createPortal(
+        <>
+          {/* Mobile Off-Canvas Drawer Overlay */}
+          <div
+            className={`mobile-drawer-overlay ${mobileMenuOpen ? 'open' : ''}`}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Mobile Off-Canvas Drawer */}
+          <aside
+            className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}
+            aria-label="منوی ناوبری موبایل"
+            aria-hidden={!mobileMenuOpen}
+          >
+            <div className="mobile-drawer-header">
+              <div
+                className="brand-clickable"
+                onClick={() => {
+                  if (isAuthenticated) {
+                    handleDrawerNavigate(userRole === 'admin' ? 'admin' : 'dashboard');
+                  } else {
+                    handleDrawerNavigate('home', 'top');
+                  }
+                }}
+              >
+                <Logo size={36} showSubtitle={false} />
+              </div>
+              <button
+                type="button"
+                className="mobile-drawer-close"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="بستن منو"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {isAuthenticated && teacher && (
+              <div className="mobile-drawer-user-card">
+                <div className="mobile-drawer-avatar">
+                  {teacher.first_name?.[0] || <User size={18} />}
+                </div>
+                <div className="mobile-drawer-user-info">
+                  <span className="mobile-drawer-user-name">
+                    {[teacher.first_name, teacher.last_name].filter(Boolean).join(' ') || 'همکار گرامی'}
+                  </span>
+                  <span className="mobile-drawer-user-sub">
+                    {teacher.school || teacher.phone_number || 'معلم و مربی طرح زیتون'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <nav className="mobile-drawer-body">
+              {isAuthenticated ? (
+                userRole === 'admin' ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${currentView === 'admin' ? 'active' : ''}`}
+                      onClick={() => handleDrawerNavigate('admin')}
+                    >
+                      <Shield size={18} />
+                      <span>پنل مدیریت ارشد</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${currentView === 'dashboard' ? 'active' : ''}`}
+                      onClick={() => handleDrawerNavigate('dashboard')}
+                    >
+                      <Eye size={18} />
+                      <span>نمای معلمان (میز کار)</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${currentView === 'dashboard' ? 'active' : ''}`}
+                      onClick={() => handleDrawerNavigate('dashboard')}
+                    >
+                      <LayoutDashboard size={18} />
+                      <span>میز کار من</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${currentView === 'profile' ? 'active' : ''}`}
+                      onClick={() => handleDrawerNavigate('profile')}
+                    >
+                      <User size={18} />
+                      <span>پروفایل و مشخصات من</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${currentView === 'survey' ? 'active' : ''}`}
+                      onClick={() => handleDrawerNavigate('survey')}
+                    >
+                      <ClipboardList size={18} />
+                      <span>نظرسنجی‌های پویش</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-drawer-link ${currentView === 'blog' ? 'active' : ''}`}
+                      onClick={() => handleDrawerNavigate('blog')}
+                    >
+                      <Bell size={18} />
+                      <span>اطلاعیه‌ها و اخبار دبیرخانه</span>
+                    </button>
+                  </>
+                )
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`mobile-drawer-link ${currentView === 'home' && activeSection === 'top' ? 'active' : ''}`}
+                    onClick={() => handleDrawerNavigate('home', 'top')}
+                  >
+                    <Home size={18} />
+                    <span>صفحه نخست</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`mobile-drawer-link ${currentView === 'home' && activeSection === 'journey' ? 'active' : ''}`}
+                    onClick={() => handleDrawerNavigate('home', 'journey')}
+                  >
+                    <Sparkles size={18} />
+                    <span>مسیر همراهی</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`mobile-drawer-link ${currentView === 'home' && activeSection === 'faq' ? 'active' : ''}`}
+                    onClick={() => handleDrawerNavigate('home', 'faq')}
+                  >
+                    <ClipboardList size={18} />
+                    <span>پرسش‌های متداول</span>
+                  </button>
+                </>
+              )}
+            </nav>
+
+            <div className="mobile-drawer-footer">
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  className="btn-astra btn-astra-danger btn-mobile-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                >
+                  <LogOut size={16} />
+                  خروج از حساب کاربری
+                </button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn-astra btn-astra-primary btn-mobile-full"
+                    onClick={() => handleDrawerNavigate('login')}
+                  >
+                    <User size={16} />
+                    ورود به سامانه
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-astra btn-astra-outline btn-mobile-full"
+                    onClick={() => handleDrawerNavigate('register')}
+                  >
+                    ثبت‌نام در سامانه
+                  </button>
+                </div>
+              )}
+            </div>
+          </aside>
+        </>,
+        document.body
+      )}
+    </>
   );
 };

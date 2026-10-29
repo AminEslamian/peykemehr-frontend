@@ -40,10 +40,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             سامانه تبلیغی پیک‌مهر، همراه معلمین و مربیان، برای ثبت تجارب و لحظات ماندگار ارائه طرح آموزشی فرهنگی زیتون در ایام فاطمیه
           </p>
 
-          <div className="hero-actions">
+          <div className="hero-actions form-action-group mobile-stack-buttons">
             <button
               type="button"
-              className="btn-astra btn-astra-primary btn-astra-lg"
+              className="btn-astra btn-astra-primary btn-astra-lg form-action-primary"
               onClick={() => onNavigate('register')}
             >
               عضویت در پیک مهر
@@ -52,7 +52,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
 
             <button
               type="button"
-              className="btn-astra btn-astra-outline btn-astra-lg"
+              className="btn-astra btn-astra-outline btn-astra-lg form-action-secondary"
               onClick={() => onNavigate('login')}
             >
               قبلاً ثبت‌نام کرده‌ام

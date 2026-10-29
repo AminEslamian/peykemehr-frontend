@@ -31,7 +31,7 @@ import {
   User,
   Edit3,
 } from 'lucide-react';
-import { api, getTeacherInfo } from '../api';
+import { api, getTeacherInfo, UserProfile } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 interface DashboardViewProps {
@@ -105,7 +105,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   };
 
   // Profile data for gender-based honorific ("جناب آقای" / "سرکار خانم")
-  const [profile, setProfile] = useState<{ first_name: string; last_name: string; gender: 'man' | 'woman' } | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   // Points & Gamification
   const [pointsData, setPointsData] = useState<{
@@ -799,12 +799,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </div>
 
             {/* Submit Action */}
-            <div style={{ marginTop: '30px', display: 'flex', gap: '14px', alignItems: 'center' }}>
+            <div className="form-action-group mobile-stack-buttons" style={{ marginTop: '30px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 type="submit"
-                className="btn-astra btn-astra-primary btn-astra-lg"
+                className="btn-astra btn-astra-primary btn-astra-lg form-action-primary"
                 disabled={submitting}
-                style={{ minWidth: '220px' }}
               >
                 {submitting ? (
                   <>
@@ -821,7 +820,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
               <button
                 type="button"
-                className="btn-astra btn-astra-ghost btn-astra-md"
+                className="btn-astra btn-astra-ghost btn-astra-md form-action-secondary"
                 onClick={() => {
                   setReportText('');
                   setSelectedTagIds([]);
@@ -843,7 +842,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       {/* TAB 2: ARCHIVE / PREVIOUS REPORTS (On-Demand with User Admission) */}
       {activeTab === 'history' && (
         <div className="studio-card">
-          <div className="studio-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="studio-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h3>
                 <FolderArchive size={20} style={{ color: 'var(--primary)' }} />
@@ -1368,9 +1367,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               </div>
               <button
                 type="button"
-                className="lightbox-close-btn"
+                className="points-modal-close-btn"
                 onClick={() => setShowPointsModal(false)}
                 title="بستن پنجره"
+                aria-label="بستن پنجره"
               >
                 <X size={18} />
               </button>
