@@ -811,6 +811,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
       return;
     }
 
+    if (file.size > 150 * 1024 * 1024) {
+      alert('حجم فایل نمی‌تواند بیشتر از ۱۵۰ مگابایت باشد.');
+      if (blogFileInputRef.current) blogFileInputRef.current.value = '';
+      return;
+    }
+
     setBlogFile(file);
     setBlogFileType(isImg ? 'image' : 'video');
     setBlogFilePreview(URL.createObjectURL(file));

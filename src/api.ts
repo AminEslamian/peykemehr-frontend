@@ -54,58 +54,88 @@ export const resolveMediaUrl = (url: string | null | undefined): string => {
 
 function translateApiError(detail: any, status?: number): string {
   if (status === 429) {
-    return 'لطفاً ۱ دقیقه صبر کنید و سپس مجدداً درخواست ارسال کد نمایید.';
+    return 'لطفاً ۱ دقیقه صبر کنید و سپس دوباره درخواست کد دهید.';
   }
 
   const raw = String(detail || '').trim();
 
+  // HTTP Status & Server limits
+  if (status === 413 || /413|payload too large|request entity too large/i.test(raw)) {
+    return 'حجم فایل ارسالی بیش از حد مجاز است.';
+  }
+  if (status === 403 || /permission/i.test(raw)) {
+    return 'شما به این بخش دسترسی ندارید.';
+  }
+  if (status === 404 || (/not found/i.test(raw) && !/phone/i.test(raw))) {
+    return 'موردی یافت نشد.';
+  }
+  if (status && status >= 500) {
+    return 'خطای سرور. لطفاً کمی بعد دوباره امتحان کنید.';
+  }
+
   // Rate limit
   if (/wait before requesting/i.test(raw) || /too many requests/i.test(raw)) {
-    return 'لطفاً ۱ دقیقه صبر کنید و سپس مجدداً درخواست ارسال کد نمایید.';
+    return 'لطفاً ۱ دقیقه صبر کنید و سپس دوباره درخواست کد دهید.';
   }
 
   // Phone doesn't exist
   if (/phone number doesn't exist/i.test(raw) || (/not found/i.test(raw) && status === 404)) {
-    return 'این شماره همراه در سامانه ثبت نشده است. لطفاً ابتدا ثبت‌نام فرمایید.';
+    return 'این شماره همراه در سامانه ثبت نشده است.';
   }
 
   // Already registered
   if (/already registered/i.test(raw)) {
     if (/national_id/i.test(raw) || /national id/i.test(raw)) {
-      return 'این کد ملی قبلاً در سامانه ثبت شده است.';
+      return 'این کد ملی قبلاً ثبت شده است.';
     }
-    return 'این شماره همراه قبلاً در سامانه ثبت شده است. لطفاً وارد حساب خود شوید.';
+    return 'این شماره همراه قبلاً ثبت شده است.';
   }
 
   // OTP Verification errors
   if (/invalid otp/i.test(raw)) {
-    return 'کد تأیید واردشده نادرست است. لطفاً مجدداً بررسی فرمایید.';
+    return 'کد تأیید نادرست است.';
   }
   if (/otp has expired/i.test(raw)) {
-    return 'کد تأیید منقضی شده است. لطفاً درخواست ارسال مجدد کد نمایید.';
+    return 'کد تأیید منقضی شده است.';
   }
   if (/no active otp/i.test(raw)) {
-    return 'کد تأیید فعالی یافت نشد. لطفاً ابتدا درخواست ارسال کد نمایید.';
+    return 'کد تأیید فعالی یافت نشد.';
   }
 
   // Validation errors
-  if (/this field is required/i.test(raw)) {
-    return 'تکمیل تمامی فیلدهای ستاره‌دار الزامی است.';
+  if (/this field is required|this field may not be blank|this field may not be null/i.test(raw)) {
+    return 'لطفاً فیلدهای الزامی را تکمیل کنید.';
   }
   if (/enter a valid/i.test(raw) || /valid phone/i.test(raw)) {
-    return 'شماره همراه واردشده نامعتبر است (باید ۱۱ رقم و با ۰۹ آغاز شود).';
+    return 'شماره همراه نامعتبر است.';
+  }
+  if (/valid image|valid video|supported/i.test(raw)) {
+    return 'فرمت فایل انتخابی معتبر نیست.';
+  }
+  if (/no file was submitted|not a file/i.test(raw)) {
+    return 'فایلی ارسال نشده است.';
+  }
+  if (/ensure this field has no more than/i.test(raw)) {
+    return 'طول متن بیش از حد مجاز است.';
+  }
+  if (/ensure this field has at least/i.test(raw)) {
+    return 'طول متن کمتر از حد مجاز است.';
+  }
+  if (/valid integer|valid number/i.test(raw)) {
+    return 'مقدار عددی معتبر وارد کنید.';
   }
 
   // Token errors
   if (/token/i.test(raw) && /not valid/i.test(raw)) {
-    return 'نشست کاربری شما منقضی شده است. لطفاً مجدداً وارد شوید.';
+    return 'نشست کاربری منقضی شده است. لطفاً دوباره وارد شوید.';
   }
 
-  if (raw) {
+  // If backend returned a Persian message (e.g. from custom serializers), return it directly
+  if (/[\u0600-\u06FF]/.test(raw)) {
     return raw;
   }
 
-  return 'خطایی در ارتباط با سرور رخ داد. لطفاً مجدداً تلاش فرمایید.';
+  return 'خطایی رخ داد. لطفاً دوباره امتحان کنید.';
 }
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {

@@ -242,21 +242,57 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     }
   };
 
+  const MAX_SINGLE_FILE_SIZE = 150 * 1024 * 1024; // 150 MB
+  const MAX_TOTAL_REPORT_SIZE = 250 * 1024 * 1024; // 250 MB
+  const MAX_FILE_COUNT = 10;
+
   // File selection
   const handleFiles = (files: FileList | null) => {
-    if (!files) return;
-    const newFiles: File[] = [];
+    if (!files || files.length === 0) return;
+    setSubmitError('');
+
+    const currentFiles = [...selectedFiles];
+    let currentTotalSize = currentFiles.reduce((acc, f) => acc + f.size, 0);
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
-        newFiles.push(file);
+
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        setSubmitError(`فرمت فایل «${file.name}» مجاز نیست.`);
+        continue;
+      }
+
+      if (file.size > MAX_SINGLE_FILE_SIZE) {
+        setSubmitError(`حجم فایل «${file.name}» بیشتر از ۱۵۰ مگابایت است.`);
+        continue;
+      }
+
+      if (currentFiles.length >= MAX_FILE_COUNT) {
+        setSubmitError('حداکثر ۱۰ فایل مجاز است.');
+        break;
+      }
+
+      if (currentTotalSize + file.size > MAX_TOTAL_REPORT_SIZE) {
+        setSubmitError('مجموع حجم فایل‌ها بیشتر از ۲۵۰ مگابایت است.');
+        break;
+      }
+
+      const exists = currentFiles.some(
+        (f) => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+      );
+      if (!exists) {
+        currentFiles.push(file);
+        currentTotalSize += file.size;
       }
     }
-    setSelectedFiles((prev) => [...prev, ...newFiles]);
+
+    setSelectedFiles(currentFiles);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setSubmitError('');
   };
 
   const formatFileSize = (bytes: number) => {
@@ -264,6 +300,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
+
+  const totalFilesSize = useMemo(() => {
+    return selectedFiles.reduce((acc, f) => acc + f.size, 0);
+  }, [selectedFiles]);
 
   // Generate client-side thumbnail URLs for chosen files before submit
   const filePreviews = useMemo(() => {
@@ -290,13 +330,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     setSubmitSuccess('');
 
     if (!reportText.trim()) {
-      setSubmitError('لطفاً شرح و روایت فعالیت کلاسی را وارد فرمایید.');
+      setSubmitError('لطفاً متن گزارش را بنویسید.');
       textInputRef.current?.focus();
       return;
     }
 
     if (selectedTagIds.length === 0 && !otherTag.trim()) {
-      setSubmitError('لطفاً حداقل یک برچسب موضوعی انتخاب نمایید یا در بخش «سایر»، عنوان فعالیت کلاسی خود را مشخص فرمایید.');
+      setSubmitError('لطفاً حداقل یک موضوع برای گزارش انتخاب کنید.');
+      return;
+    }
+
+    for (const file of selectedFiles) {
+      if (file.size > MAX_SINGLE_FILE_SIZE) {
+        setSubmitError(`حجم فایل «${file.name}» بیشتر از ۱۵۰ مگابایت است.`);
+        return;
+      }
+    }
+
+    if (totalFilesSize > MAX_TOTAL_REPORT_SIZE) {
+      setSubmitError('مجموع حجم فایل‌ها بیشتر از ۲۵۰ مگابایت است.');
+      return;
+    }
+
+    if (selectedFiles.length > MAX_FILE_COUNT) {
+      setSubmitError('حداکثر ۱۰ فایل مجاز است.');
       return;
     }
 
@@ -747,15 +804,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   <span>انتخاب عکس یا فیلم</span>
                 </div>
                 <div className="upload-compact-hint">
-                  یا کشیدن و رها کردن فایل‌ها (حداکثر ۱۰ فایل)
+                  حداکثر ۱۰ فایل (هر فایل تا ۱۵۰ مگابایت، مجموع تا ۲۵۰ مگابایت)
                 </div>
               </div>
 
               {/* Instant Client-side Previews with Real Thumbnails */}
               {filePreviews.length > 0 && (
                 <div style={{ marginTop: '16px' }}>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, marginBottom: '10px' }}>
-                    فایل‌های آماده ارسال ({toPersianDigits(filePreviews.length)} مورد):
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>فایل‌های آماده ارسال ({toPersianDigits(filePreviews.length)} مورد):</span>
+                    <span style={{ fontSize: '0.78rem', color: totalFilesSize > MAX_TOTAL_REPORT_SIZE ? 'var(--danger)' : 'var(--muted-foreground)' }}>
+                      مجموع حجم: {formatFileSize(totalFilesSize)} از ۲۵۰ مگابایت
+                    </span>
                   </div>
                   <div className="upload-preview-grid">
                     {filePreviews.map((item, idx) => (
