@@ -198,6 +198,77 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+export function uploadWithProgress<T>(
+  url: string,
+  formData: FormData,
+  onProgress?: (percent: number, loaded: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+
+    const token = getAccessToken();
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        xhr.abort();
+        reject(new Error('آپلود توسط کاربر لغو شد.'));
+      });
+    }
+
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+          onProgress(percent, event.loaded, event.total);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      let data: any = {};
+      try {
+        data = JSON.parse(xhr.responseText || '{}');
+      } catch {
+        data = {};
+      }
+
+      if (xhr.status === 401) {
+        clearAuth();
+        window.location.hash = '#/login';
+        return reject(new Error('نشست شما منقضی شده است. لطفاً مجدداً وارد شوید.'));
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        return resolve(data as T);
+      }
+
+      let msg = data.detail;
+      if (!msg && typeof data === 'object') {
+        msg = Object.values(data).flat().join(' - ');
+      }
+      const translatedMsg = translateApiError(msg, xhr.status);
+      const error: any = new Error(translatedMsg);
+      error.status = xhr.status;
+      reject(error);
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی نمایید.'));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error('زمان ارسال به پایان رسید. لطفاً مجدداً تلاش نمایید.'));
+    };
+
+    xhr.send(formData);
+  });
+}
+
 export interface UserProfile {
   id?: number;
   first_name: string;
@@ -255,11 +326,12 @@ export const api = {
       }>
     >('/api/reports/'),
 
-  createReport: (formData: FormData) =>
-    request<{ id: number }>('/api/reports/', {
-      method: 'POST',
-      body: formData,
-    }),
+  createReport: (
+    formData: FormData,
+    onProgress?: (percent: number, loaded: number, total: number) => void,
+    signal?: AbortSignal
+  ) =>
+    uploadWithProgress<{ id: number }>('/api/reports/', formData, onProgress, signal),
 
   deleteReport: (id: number) =>
     request<void>(`/api/reports/${id}/`, {
