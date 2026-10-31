@@ -28,7 +28,7 @@ import {
   User,
   Edit3,
 } from 'lucide-react';
-import { api, getTeacherInfo, UserProfile } from '../api';
+import { api, getTeacherInfo, UserProfile, hasPersianDigits } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 interface DashboardViewProps {
@@ -136,6 +136,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
     if (!contactForm.subject.trim() || !contactForm.message.trim()) {
       setContactError('لطفاً موضوع و متن پیام پشتیبانی را تکمیل فرمایید.');
+      return;
+    }
+
+    if (contactForm.phone && hasPersianDigits(contactForm.phone)) {
+      setContactError('لطفاً شماره همراه را با ارقام انگلیسی وارد کنید.');
       return;
     }
 
@@ -1179,8 +1184,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                     className="form-input"
                     dir="ltr"
                     value={contactForm.phone}
-                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setContactForm({ ...contactForm, phone: val });
+                      if (hasPersianDigits(val)) {
+                        setContactError('لطفاً شماره همراه را با ارقام انگلیسی وارد کنید.');
+                      } else if (contactError === 'لطفاً شماره همراه را با ارقام انگلیسی وارد کنید.') {
+                        setContactError('');
+                      }
+                    }}
+                    placeholder="09123456789"
                   />
                 </div>
 

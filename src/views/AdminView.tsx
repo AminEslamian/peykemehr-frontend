@@ -39,7 +39,7 @@ import {
   Play,
   Check,
 } from 'lucide-react';
-import { api, getTeacherInfo } from '../api';
+import { api, getTeacherInfo, hasPersianDigits } from '../api';
 
 interface AdminViewProps {
   onNavigate: (view: string) => void;
@@ -460,6 +460,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   const handleSaveTeacherEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTeacher) return;
+
+    if (teacherEditForm.phone_number && hasPersianDigits(teacherEditForm.phone_number)) {
+      alert('لطفاً شماره همراه را با ارقام انگلیسی وارد کنید.');
+      return;
+    }
+    if (teacherEditForm.national_id && hasPersianDigits(teacherEditForm.national_id)) {
+      alert('لطفاً کد ملی را با ارقام انگلیسی وارد کنید.');
+      return;
+    }
 
     setTeacherUpdating(true);
     try {

@@ -52,6 +52,14 @@ export const resolveMediaUrl = (url: string | null | undefined): string => {
   return `/media/${cleaned}`;
 };
 
+/**
+ * Checks if a string contains Persian (۰-۹) or Arabic (٠-٩) digits.
+ */
+export const hasPersianDigits = (value: string | number | null | undefined): boolean => {
+  if (value === null || value === undefined) return false;
+  return /[۰-۹٠-٩]/.test(String(value));
+};
+
 function translateApiError(detail: any, status?: number): string {
   if (status === 429) {
     return 'لطفاً ۱ دقیقه صبر کنید و سپس دوباره درخواست کد دهید.';
@@ -103,6 +111,12 @@ function translateApiError(detail: any, status?: number): string {
   }
 
   // Validation errors
+  if (/phone number must contain|11 digits/i.test(raw)) {
+    return 'شماره همراه باید ۱۱ رقم با ارقام انگلیسی باشد (مثال: 09123456789).';
+  }
+  if (/national id must contain|10 digits/i.test(raw)) {
+    return 'کد ملی باید ۱۰ رقم با ارقام انگلیسی باشد.';
+  }
   if (/this field is required|this field may not be blank|this field may not be null/i.test(raw)) {
     return 'لطفاً فیلدهای الزامی را تکمیل کنید.';
   }
