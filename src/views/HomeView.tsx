@@ -181,7 +181,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         </div>
 
         <div className="faq-list">
-          <details className="faq-item" open>
+          <details className="faq-item">
             <summary>آیا استفاده از سامانه برای معلمین و مربیان هزینه‌ای دارد؟</summary>
             <p>خیر؛ ثبت‌نام، ارسال گزارش‌ها و شرکت در نظرسنجی‌ها برای تمامی معلمین و مربیان مدارس کاملاً رایگان است.</p>
           </details>

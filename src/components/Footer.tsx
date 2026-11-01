@@ -1,5 +1,4 @@
 import React from 'react';
-import { Logo } from './Logo';
 
 interface FooterProps {
   onNavigate?: (view: string) => void;
@@ -18,7 +17,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="site-footer">
       <div className="header-inner footer-inner">
         <div className="footer-brand">
-          <Logo size={38} variant="icon" />
           <div className="footer-copy">
             <span className="footer-brand-title">سامانه پیک مهر</span>
             <span className="footer-brand-sub">همراه معلمین و مربیان</span>
